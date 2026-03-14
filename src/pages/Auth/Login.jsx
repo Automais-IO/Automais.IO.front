@@ -1,21 +1,34 @@
 import { Radio, Mail, Lock, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
     setIsLoading(true)
     
-    // TODO: Implementar autenticação real
-    setTimeout(() => {
-      navigate('/')
-    }, 1000)
+    try {
+      const result = await login(email, password)
+      
+      if (result.success) {
+        navigate('/')
+      } else {
+        setError(result.error || 'Erro ao fazer login')
+      }
+    } catch (err) {
+      setError(err.message || 'Erro ao fazer login. Tente novamente.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -40,6 +53,13 @@ export default function Login() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="card py-8 px-4 shadow-lg sm:rounded-2xl sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Mensagem de erro */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label htmlFor="email" className="label">
@@ -54,9 +74,13 @@ export default function Login() {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('')
+                  }}
                   className="input pl-10"
                   placeholder="seu@email.com"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -75,9 +99,13 @@ export default function Login() {
                   autoComplete="current-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setError('')
+                  }}
                   className="input pl-10"
                   placeholder="••••••••"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -120,13 +148,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-primary-50 rounded-lg">
-            <p className="text-xs text-primary-800 font-medium mb-2">🎨 Mockup Demo:</p>
-            <p className="text-xs text-primary-700">
-              Use qualquer email/senha para entrar
-            </p>
-          </div>
         </div>
 
         {/* Footer */}

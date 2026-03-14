@@ -1,6 +1,46 @@
-import { Bell, Search, Menu } from 'lucide-react'
+import { Bell, Search, Menu, LogOut, User } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function Header() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  // Fechar menu ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isMenuOpen])
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  // Obter iniciais do nome do usuário
+  const getInitials = (name) => {
+    if (!name) return 'U'
+    const parts = name.trim().split(' ')
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
       <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
@@ -30,14 +70,36 @@ export default function Header() {
           </button>
 
           {/* User menu */}
-          <button className="flex items-center gap-2 p-1.5 pr-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <div className="w-8 h-8 bg-gradient-purple rounded-lg flex items-center justify-center text-white text-sm font-semibold">
-              JD
-            </div>
-            <span className="text-sm font-medium text-gray-700 hidden sm:block">
-              John Doe
-            </span>
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="flex items-center gap-2 p-1.5 pr-3 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <div className="w-8 h-8 bg-gradient-purple rounded-lg flex items-center justify-center text-white text-sm font-semibold">
+                {getInitials(user?.name)}
+              </div>
+              <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                {user?.name || 'Usuário'}
+              </span>
+            </button>
+
+            {/* Dropdown menu */}
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <div className="px-4 py-2 border-b border-gray-200">
+                  <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sair
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
