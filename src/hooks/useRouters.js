@@ -8,10 +8,20 @@ export const useRouters = () => {
   const tenantId = getTenantId()
   const queryClient = useQueryClient()
 
+  // Validar tenantId antes de fazer a requisição
+  if (!tenantId) {
+    console.error('❌ tenantId não encontrado! Não é possível buscar routers.')
+  } else {
+    console.log('🔍 Buscando routers para tenantId:', tenantId)
+  }
+
   const query = useQuery({
     queryKey: ['routers', tenantId],
     queryFn: async () => {
-      console.log('🔄 Refetching routers...')
+      if (!tenantId) {
+        throw new Error('tenantId não encontrado')
+      }
+      console.log('🔄 Refetching routers para tenantId:', tenantId)
       const data = await routersApi.getByTenant(tenantId)
       console.log('✅ Routers atualizados do servidor:', data.length, 'routers')
       return data

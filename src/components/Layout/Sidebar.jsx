@@ -11,6 +11,8 @@ import {
   Network,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { useTenant } from '../../hooks/useTenant'
+import { useAuth } from '../../contexts/AuthContext'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -23,6 +25,30 @@ const navigation = [
 ]
 
 export default function Sidebar() {
+  const { data: tenant, isLoading: isLoadingTenant } = useTenant()
+  const { user } = useAuth()
+
+  // Gerar iniciais do tenant a partir do nome
+  const getTenantInitials = (name) => {
+    if (!name) return '??'
+    const words = name.trim().split(/\s+/)
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+
+  // Obter role do usuário (pode vir do backend ou ser mapeado)
+  const getUserRole = () => {
+    // TODO: Quando o backend retornar a role do usuário, usar aqui
+    // Por enquanto, retornar 'Owner' como padrão
+    return user?.role || 'Owner'
+  }
+
+  const tenantInitials = tenant?.name ? getTenantInitials(tenant.name) : '??'
+  const tenantName = tenant?.name || 'Carregando...'
+  const userRole = getUserRole()
+
   return (
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
       <div className="flex flex-col flex-grow bg-gradient-purple overflow-y-auto shadow-purple-lg">
@@ -43,14 +69,18 @@ export default function Sidebar() {
         <div className="px-4 py-4 bg-white/10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white font-semibold">
-              AC
+              {isLoadingTenant ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                tenantInitials
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-white truncate">
-                Acme Corporation
+                {isLoadingTenant ? 'Carregando...' : tenantName}
               </div>
               <div className="text-xs text-primary-100">
-                Owner
+                {userRole}
               </div>
             </div>
           </div>

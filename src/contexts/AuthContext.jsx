@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { authApi } from '../services/authApi'
+import { setTenantId } from '../config/tenant'
 
 const AuthContext = createContext(null)
 
@@ -15,8 +16,15 @@ export function AuthProvider({ children }) {
 
     if (storedToken && storedUser) {
       try {
+        const user = JSON.parse(storedUser)
         setToken(storedToken)
-        setUser(JSON.parse(storedUser))
+        setUser(user)
+        
+        // Salvar tenantId se disponível
+        if (user?.tenantId || user?.TenantId) {
+          const tenantId = user.tenantId || user.TenantId
+          setTenantId(tenantId)
+        }
       } catch (error) {
         console.error('Erro ao carregar dados de autenticação:', error)
         localStorage.removeItem('token')
@@ -36,6 +44,12 @@ export function AuthProvider({ children }) {
       setUser(response.user)
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
+      
+      // Salvar tenantId se disponível
+      if (response.user?.tenantId || response.user?.TenantId) {
+        const tenantId = response.user.tenantId || response.user.TenantId
+        setTenantId(tenantId)
+      }
       
       return { success: true }
     } catch (error) {

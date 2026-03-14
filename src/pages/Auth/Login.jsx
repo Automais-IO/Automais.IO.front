@@ -125,9 +125,13 @@ export default function Login() {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="font-medium text-primary-600 hover:text-primary-500"
+                >
                   Esqueceu a senha?
-                </a>
+                </button>
               </div>
             </div>
 

@@ -10,6 +10,7 @@ import RouterManagement from './pages/Routers/RouterManagement'
 import Users from './pages/Users/Users'
 import Vpn from './pages/Vpn/Vpn'
 import Login from './pages/Auth/Login'
+import ForgotPassword from './pages/Auth/ForgotPassword'
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -29,6 +30,12 @@ function AppRoutes() {
         path="/login" 
         element={
           isAuthenticated ? <Navigate to="/" replace /> : <Login />
+        } 
+      />
+      <Route 
+        path="/forgot-password" 
+        element={
+          isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />
         } 
       />
       
