@@ -27,11 +27,11 @@ export function isProduction() {
 }
 
 // URL base da API
-// Em produção: usa api.automais.io (nginx faz proxy reverso)
+// Em produção: usa api.automais.io/api (nginx faz proxy reverso)
 // Em desenvolvimento: usa proxy do Vite (/api)
 export function getApiBaseUrl() {
   return getIsProduction() 
-    ? 'https://api.automais.io'
+    ? 'https://api.automais.io/api'
     : '/api'
 }
 
@@ -42,7 +42,7 @@ export const API_BASE_URL = (() => {
   try {
     const hostname = window.location.hostname
     return (hostname === 'automais.io' || hostname === 'www.automais.io')
-      ? 'https://api.automais.io'
+      ? 'https://api.automais.io/api'
       : '/api'
   } catch {
     return '/api'
@@ -52,7 +52,7 @@ export const API_BASE_URL = (() => {
 // URL base para SignalR
 export function getSignalRBaseUrl() {
   return getIsProduction()
-    ? 'https://api.automais.io/hubs'
+    ? 'https://api.automais.io/api/hubs'
     : '/hubs'
 }
 
@@ -62,7 +62,7 @@ export const SIGNALR_BASE_URL = (() => {
   try {
     const hostname = window.location.hostname
     return (hostname === 'automais.io' || hostname === 'www.automais.io')
-      ? 'https://api.automais.io/hubs'
+      ? 'https://api.automais.io/api/hubs'
       : '/hubs'
   } catch {
     return '/hubs'
@@ -99,7 +99,7 @@ export function getRouterOsWsUrl(routerId) {
   const wsProtocol = getWsProtocol()
   
   if (getIsProduction()) {
-    // Em produção, usar api.automais.io (nginx faz proxy reverso)
+    // Em produção, usar api.automais.io/api (nginx faz proxy reverso)
     return `${wsProtocol}api.automais.io${wsPath}`
   } else {
     // Em desenvolvimento, usar localhost (o proxy do Vite não funciona para WebSocket, usar localhost direto)
