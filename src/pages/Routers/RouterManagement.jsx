@@ -129,15 +129,7 @@ export default function RouterManagement() {
       const status = await routerOsWebSocketService.getStatus(routerId, routerIp)
       
       // O backend retorna router_ip na resposta quando busca do peer WireGuard
-      const finalRouterIp = status.router_ip || routerIp
-      // Status recebido 
-        connected: status.connected, 
-        router_ip: status.router_ip, 
-        routerIp_inicial: routerIp,
-        routerIp_final: finalRouterIp 
-      })
-      
-      setConnectionStatus({
+      const finalRouterIp = status.router_ip || routerIp`n      `n      setConnectionStatus({
         connected: status.connected || false,
         success: status.success || false,
         routerIp: finalRouterIp,
