@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
   ArrowLeft, 
@@ -129,7 +129,9 @@ export default function RouterManagement() {
       const status = await routerOsWebSocketService.getStatus(routerId, routerIp)
       
       // O backend retorna router_ip na resposta quando busca do peer WireGuard
-      const finalRouterIp = status.router_ip || routerIp`n      `n      setConnectionStatus({
+      const finalRouterIp = status.router_ip || routerIp
+      
+      setConnectionStatus({
         connected: status.connected || false,
         success: status.success || false,
         routerIp: finalRouterIp,
