@@ -33,6 +33,7 @@ export default function UserModal({ isOpen, onClose, user = null }) {
     email: '',
     role: 'Viewer',
     vpnEnabled: false,
+    enabled: true,
   })
 
   const [selectedRoutes, setSelectedRoutes] = useState(new Set())
@@ -45,11 +46,13 @@ export default function UserModal({ isOpen, onClose, user = null }) {
   useEffect(() => {
     if (isOpen) {
       if (user) {
+        const st = (user.status || '').toLowerCase()
         setFormData({
           name: user.name || '',
           email: user.email || '',
           role: user.role || 'Viewer',
           vpnEnabled: user.vpnEnabled || false,
+          enabled: st === 'active',
         })
       } else {
         setFormData({
@@ -57,6 +60,7 @@ export default function UserModal({ isOpen, onClose, user = null }) {
           email: '',
           role: 'Viewer',
           vpnEnabled: false,
+          enabled: true,
         })
       }
       setActiveTab('basic')
@@ -123,10 +127,15 @@ export default function UserModal({ isOpen, onClose, user = null }) {
 
     try {
       if (isEditing) {
-        // Atualizar dados básicos do usuário
         await updateUser.mutateAsync({
           id: user.id,
-          data: formData,
+          data: {
+            name: formData.name,
+            email: formData.email,
+            role: formData.role,
+            vpnEnabled: formData.vpnEnabled,
+            status: formData.enabled ? 'active' : 'disabled',
+          },
         })
         
         // Atualizar rotas permitidas
@@ -137,24 +146,40 @@ export default function UserModal({ isOpen, onClose, user = null }) {
           }
         })
       } else {
-        const created = await createUser.mutateAsync(formData)
+        const created = await createUser.mutateAsync({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          vpnEnabled: formData.vpnEnabled,
+          enabled: formData.enabled,
+        })
         onClose()
-        const emailFail =
-          created?.emailDeliveryFailedAt != null || created?.EmailDeliveryFailedAt != null
-        const emailMsg =
-          created?.emailDeliveryFailureMessage || created?.EmailDeliveryFailureMessage || ''
-        if (emailFail) {
-          setMessageModal({
-            isOpen: true,
-            type: 'warning',
-            message: `Usuário criado, mas o e-mail não foi entregue.\n\n${emailMsg}\n\nCorrija o SMTP ou informe a senha temporária manualmente; após o e-mail funcionar, use "Resetar senha" na edição do usuário.`,
-          })
-        } else {
+        if (!formData.enabled) {
           setMessageModal({
             isOpen: true,
             type: 'success',
-            message: 'Usuário criado com sucesso! O convite foi enviado por e-mail.',
+            message:
+              'Usuário criado sem acesso ao login. Marque "Usuário habilitado" na edição e use "Resetar senha" para enviar credenciais quando for liberar o acesso.',
           })
+        } else {
+          const emailFail =
+            created?.emailDeliveryFailedAt != null || created?.EmailDeliveryFailedAt != null
+          const emailMsg =
+            created?.emailDeliveryFailureMessage || created?.EmailDeliveryFailureMessage || ''
+          if (emailFail) {
+            setMessageModal({
+              isOpen: true,
+              type: 'warning',
+              message: `Usuário criado, mas o e-mail não foi entregue.\n\n${emailMsg}\n\nCorrija o SMTP ou informe a senha temporária manualmente; após o e-mail funcionar, use "Resetar senha" na edição do usuário.`,
+            })
+          } else {
+            setMessageModal({
+              isOpen: true,
+              type: 'success',
+              message:
+                'Usuário criado e habilitado. Um e-mail com a senha inicial foi enviado (válida por 12 horas).',
+            })
+          }
         }
         return
       }
@@ -220,7 +245,7 @@ export default function UserModal({ isOpen, onClose, user = null }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? 'Editar Usuário' : 'Adicionar Usuário'}
+      title={isEditing ? 'Editar usuário' : 'Criar usuário'}
       className="max-w-4xl"
     >
       {/* Tabs */}
@@ -328,6 +353,27 @@ export default function UserModal({ isOpen, onClose, user = null }) {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="enabled"
+                  checked={formData.enabled}
+                  onChange={handleChange}
+                  className="mt-1 w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    Usuário habilitado (pode fazer login)
+                  </span>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Desmarcado: o usuário não entra na plataforma até você marcar novamente. Útil para
+                    cadastrar antes de liberar o acesso.
+                  </p>
+                </div>
+              </label>
             </div>
 
             <div>
@@ -458,8 +504,8 @@ export default function UserModal({ isOpen, onClose, user = null }) {
             {createUser.isPending || updateUser.isPending
               ? 'Salvando...'
               : isEditing
-              ? 'Atualizar'
-              : 'Adicionar'}
+              ? 'Salvar'
+              : 'Criar usuário'}
           </button>
         </div>
       </form>

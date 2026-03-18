@@ -29,15 +29,23 @@ api.interceptors.response.use(
     if (error.response) {
       // Se receber 401 (Unauthorized), limpar autenticação e redirecionar para login
       if (error.response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        // Redirecionar para login apenas se não estiver já na página de login
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login'
+        const reqUrl = error.config?.url || ''
+        const isChangePassword = reqUrl.includes('/auth/change-password')
+        if (!isChangePassword) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/definir-senha') {
+            window.location.href = '/login'
+          }
         }
       }
       
-      // Erro da API
+      if (error.response.status === 403 && error.response.data?.code === 'MUST_CHANGE_PASSWORD') {
+        if (!window.location.pathname.includes('definir-senha')) {
+          window.location.assign('/definir-senha')
+        }
+      }
+
       const message = error.response.data?.message || 'Erro ao processar requisição'
       return Promise.reject(new Error(message))
     } else if (error.request) {

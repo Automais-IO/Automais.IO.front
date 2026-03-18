@@ -1,4 +1,5 @@
-import { Radio, Mail, Lock, ArrowRight } from 'lucide-react'
+import { Mail, Lock, ArrowRight } from 'lucide-react'
+import BrandLogo from '../../components/BrandLogo'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -20,7 +21,7 @@ export default function Login() {
       const result = await login(email, password)
       
       if (result.success) {
-        navigate('/')
+        navigate(result.mustChangePassword ? '/definir-senha' : '/')
       } else {
         setError(result.error || 'Erro ao fazer login')
       }
@@ -36,16 +37,9 @@ export default function Login() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo */}
         <div className="flex justify-center">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 bg-gradient-purple rounded-2xl flex items-center justify-center shadow-purple">
-              <Radio className="w-8 h-8 text-white" />
-            </div>
-          </div>
+          <BrandLogo className="h-14 sm:h-16 w-auto max-w-[280px] object-contain mx-auto" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-          Automais IoT Platform
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-gray-600">
           Faça login para acessar sua conta
         </p>
       </div>

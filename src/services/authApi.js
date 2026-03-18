@@ -16,6 +16,14 @@ export const authApi = {
     return response.data
   },
 
+  changePassword: async (currentPassword, newPassword) => {
+    const response = await api.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    })
+    return response.data
+  },
+
   // Validar token (opcional, para verificar se token ainda é válido)
   validateToken: async (token) => {
     // Se necessário, criar endpoint no backend para validar token

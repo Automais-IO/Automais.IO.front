@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { authApi } from '../services/authApi'
 import { setTenantId } from '../config/tenant'
+import { jwtRequiresPasswordChange } from '../utils/jwt'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
+  const [mustChangePassword, setMustChangePassword] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   // Carregar dados do localStorage ao inicializar
@@ -19,8 +21,8 @@ export function AuthProvider({ children }) {
         const user = JSON.parse(storedUser)
         setToken(storedToken)
         setUser(user)
-        
-        // Salvar tenantId se disponível
+        setMustChangePassword(jwtRequiresPasswordChange(storedToken))
+
         if (user?.tenantId || user?.TenantId) {
           const tenantId = user.tenantId || user.TenantId
           setTenantId(tenantId)
@@ -42,16 +44,20 @@ export function AuthProvider({ children }) {
       // Salvar token e usuário
       setToken(response.token)
       setUser(response.user)
+      const needCh =
+        response.mustChangePassword === true ||
+        response.MustChangePassword === true ||
+        jwtRequiresPasswordChange(response.token)
+      setMustChangePassword(needCh)
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
-      
-      // Salvar tenantId se disponível
+
       if (response.user?.tenantId || response.user?.TenantId) {
         const tenantId = response.user.tenantId || response.user.TenantId
         setTenantId(tenantId)
       }
-      
-      return { success: true }
+
+      return { success: true, mustChangePassword: needCh }
     } catch (error) {
       console.error('Erro ao fazer login:', error)
       return { 
@@ -64,21 +70,37 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setToken(null)
     setUser(null)
+    setMustChangePassword(false)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+  }
+
+  const completePasswordChange = (data) => {
+    setToken(data.token)
+    setUser(data.user)
+    setMustChangePassword(false)
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    if (data.user?.tenantId || data.user?.TenantId) {
+      setTenantId(data.user.tenantId || data.user.TenantId)
+    }
   }
 
   const isAuthenticated = !!token && !!user
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      token,
-      isAuthenticated,
-      isLoading,
-      login,
-      logout
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isAuthenticated,
+        isLoading,
+        mustChangePassword,
+        login,
+        logout,
+        completePasswordChange,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

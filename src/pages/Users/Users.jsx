@@ -33,17 +33,18 @@ export default function Users() {
     const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = roleFilter === 'all' || user.role === roleFilter.toLowerCase()
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && user.status === 'active') ||
-      (statusFilter === 'inactive' && user.status !== 'active')
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'enabled' && user.status === 'active') ||
+      (statusFilter === 'disabled' && user.status !== 'active')
     return matchesSearch && matchesRole && matchesStatus
   }) || []
 
   const stats = {
     total: users?.length || 0,
-    active: users?.filter(u => u.status === 'active').length || 0,
-    admins: users?.filter(u => u.role === 'admin' || u.role === 'owner').length || 0,
-    pending: 0, // Não há dados de convites pendentes na API atual
+    active: users?.filter((u) => u.status === 'active').length || 0,
+    admins: users?.filter((u) => u.role === 'admin' || u.role === 'owner').length || 0,
+    semAcesso: users?.filter((u) => u.status !== 'active').length || 0,
   }
 
   if (isLoading) {
@@ -77,7 +78,7 @@ export default function Users() {
         </div>
         <button onClick={handleAdd} className="btn btn-primary">
           <Plus className="w-4 h-4" />
-          Convidar Usuário
+          Criar usuário
         </button>
       </div>
 
@@ -85,19 +86,19 @@ export default function Users() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="card p-4">
           <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-600 mt-1">Total de Usuários</div>
+          <div className="text-sm text-gray-600 mt-1">Total de usuários</div>
         </div>
         <div className="card p-4">
           <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-          <div className="text-sm text-gray-600 mt-1">Ativos</div>
+          <div className="text-sm text-gray-600 mt-1">Com acesso (login)</div>
         </div>
         <div className="card p-4">
           <div className="text-2xl font-bold text-primary-600">{stats.admins}</div>
-          <div className="text-sm text-gray-600 mt-1">Admins</div>
+          <div className="text-sm text-gray-600 mt-1">Admins / Owners</div>
         </div>
         <div className="card p-4">
-          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          <div className="text-sm text-gray-600 mt-1">Convites Pendentes</div>
+          <div className="text-2xl font-bold text-amber-600">{stats.semAcesso}</div>
+          <div className="text-sm text-gray-600 mt-1">Sem acesso ao login</div>
         </div>
       </div>
 
@@ -129,9 +130,9 @@ export default function Users() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="all">Todos os status</option>
-          <option value="active">Ativos</option>
-          <option value="inactive">Inativos</option>
+          <option value="all">Todos</option>
+          <option value="enabled">Com acesso (login)</option>
+          <option value="disabled">Sem acesso</option>
         </select>
       </div>
 
@@ -147,12 +148,12 @@ export default function Users() {
           <p className="text-gray-600 mb-4">
             {searchTerm || roleFilter !== 'all' || statusFilter !== 'all'
               ? 'Tente ajustar os filtros de busca'
-              : 'Comece adicionando seu primeiro usuário'}
+              : 'Comece criando o primeiro usuário'}
           </p>
           {(!searchTerm && roleFilter === 'all' && statusFilter === 'all') && (
             <button onClick={handleAdd} className="btn btn-primary">
               <Plus className="w-4 h-4" />
-              Convidar Usuário
+              Criar usuário
             </button>
           )}
         </div>
@@ -169,7 +170,7 @@ export default function Users() {
                     Role
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Status
+                    Acesso
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Último Login
@@ -221,11 +222,13 @@ export default function Users() {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={clsx(
-                        'badge',
-                        user.status === 'active' ? 'badge-success' : 'badge-gray'
-                      )}>
-                        {user.status === 'active' ? 'Ativo' : 'Inativo'}
+                      <span
+                        className={clsx(
+                          'badge',
+                          user.status === 'active' ? 'badge-success' : 'badge-gray'
+                        )}
+                      >
+                        {user.status === 'active' ? 'Habilitado' : 'Sem acesso'}
                       </span>
                     </td>
                     <td className="py-4 px-4">

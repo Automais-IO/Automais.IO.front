@@ -13,6 +13,7 @@ import {
 import clsx from 'clsx'
 import { useTenant } from '../../hooks/useTenant'
 import { useAuth } from '../../contexts/AuthContext'
+import BrandLogo from '../BrandLogo'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -53,15 +54,9 @@ export default function Sidebar() {
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
       <div className="flex flex-col flex-grow bg-gradient-purple overflow-y-auto shadow-purple-lg">
         {/* Logo */}
-        <div className="flex items-center justify-center h-16 px-4 bg-black/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-              <Radio className="w-6 h-6 text-primary-600" />
-            </div>
-            <div className="text-white">
-              <div className="text-xl font-bold">Automais</div>
-              <div className="text-xs text-primary-100">IoT Platform</div>
-            </div>
+        <div className="flex items-center justify-center min-h-16 py-3 px-4 bg-black/10">
+          <div className="rounded-lg bg-white/95 px-4 py-2 shadow-sm">
+            <BrandLogo className="h-8 w-auto max-w-[200px] object-contain" alt="Automais" />
           </div>
         </div>
 

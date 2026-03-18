@@ -11,9 +11,10 @@ import Users from './pages/Users/Users'
 import Vpn from './pages/Vpn/Vpn'
 import Login from './pages/Auth/Login'
 import ForgotPassword from './pages/Auth/ForgotPassword'
+import DefinirSenha from './pages/Auth/DefinirSenha'
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, mustChangePassword } = useAuth()
 
   // Mostrar loading enquanto verifica autenticação
   if (isLoading) {
@@ -24,26 +25,29 @@ function AppRoutes() {
     )
   }
 
+  if (isAuthenticated && mustChangePassword) {
+    return (
+      <Routes>
+        <Route path="/definir-senha" element={<DefinirSenha />} />
+        <Route path="*" element={<Navigate to="/definir-senha" replace />} />
+      </Routes>
+    )
+  }
+
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={
-          isAuthenticated ? <Navigate to="/" replace /> : <Login />
-        } 
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
       />
-      <Route 
-        path="/forgot-password" 
-        element={
-          isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />
-        } 
+      <Route
+        path="/forgot-password"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />}
       />
-      
+
       <Route
         path="/"
-        element={
-          isAuthenticated ? <Layout /> : <Navigate to="/login" replace />
-        }
+        element={isAuthenticated ? <Layout /> : <Navigate to="/login" replace />}
       >
         <Route index element={<Dashboard />} />
         <Route path="applications" element={<Applications />} />
