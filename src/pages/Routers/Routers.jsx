@@ -351,6 +351,11 @@ export default function Routers() {
                   {router.model && (
                     <p className="text-sm text-gray-600 mt-1">{router.model}</p>
                   )}
+                  {router.vpnTunnelIp && (
+                    <p className="text-xs text-gray-600 mt-1 font-mono" title="IP do peer na VPN — usado para conectar ao router (API/ping)">
+                      IP na VPN: <span className="text-primary-600 font-medium">{router.vpnTunnelIp}</span>
+                    </p>
+                  )}
                   {router.vpnNetworkId && !router.wireGuardPeerId && (
                     <div className="mt-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 inline-block">
                       VPN: sem peer WireGuard
