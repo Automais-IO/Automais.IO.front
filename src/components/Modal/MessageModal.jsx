@@ -30,7 +30,7 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
   const bgColor = bgColorMap[type] || bgColorMap.info
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title || (type === 'success' ? 'Sucesso' : type === 'error' ? 'Erro' : 'Informação')}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title || (type === 'success' ? 'Sucesso' : type === 'error' ? 'Erro' : type === 'warning' ? 'Atenção' : 'Informação')}>
       <div className="flex items-start gap-4">
         <div className={`flex-shrink-0 ${iconColor}`}>
           <Icon className="w-8 h-8" />

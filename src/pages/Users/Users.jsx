@@ -1,4 +1,4 @@
-import { Users as UsersIcon, Plus, Search, Mail, Shield, MoreVertical, AlertCircle } from 'lucide-react'
+import { Users as UsersIcon, Plus, Search, Mail, Shield, MoreVertical, AlertCircle, MailWarning } from 'lucide-react'
 import clsx from 'clsx'
 import { useUsers } from '../../hooks/useUsers'
 import UserModal from '../../components/Modal/UserModal'
@@ -194,9 +194,22 @@ export default function Users() {
                           <div className="text-sm font-medium text-gray-900">
                             {user.name || 'Sem nome'}
                           </div>
-                          <div className="text-sm text-gray-600 flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
+                          <div className="text-sm text-gray-600 flex items-center gap-1 flex-wrap">
+                            <Mail className="w-3 h-3 flex-shrink-0" />
                             {user.email}
+                            {(user.emailDeliveryFailedAt != null || user.EmailDeliveryFailedAt != null) && (
+                              <span
+                                className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-200"
+                                title={
+                                  user.emailDeliveryFailureMessage ||
+                                  user.EmailDeliveryFailureMessage ||
+                                  'Falha ao enviar e-mail — abra o usuário para detalhes'
+                                }
+                              >
+                                <MailWarning className="w-3 h-3" />
+                                E-mail não enviado
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

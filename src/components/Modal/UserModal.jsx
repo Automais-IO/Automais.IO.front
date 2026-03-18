@@ -10,7 +10,7 @@ import {
   useUpdateUserRoutes,
   useResetPassword
 } from '../../hooks/useUsers'
-import { Check, X, KeyRound } from 'lucide-react'
+import { Check, X, KeyRound, MailWarning } from 'lucide-react'
 
 const roleOptions = [
   { value: 'Owner', label: 'Owner' },
@@ -137,13 +137,32 @@ export default function UserModal({ isOpen, onClose, user = null }) {
           }
         })
       } else {
-        await createUser.mutateAsync(formData)
+        const created = await createUser.mutateAsync(formData)
+        onClose()
+        const emailFail =
+          created?.emailDeliveryFailedAt != null || created?.EmailDeliveryFailedAt != null
+        const emailMsg =
+          created?.emailDeliveryFailureMessage || created?.EmailDeliveryFailureMessage || ''
+        if (emailFail) {
+          setMessageModal({
+            isOpen: true,
+            type: 'warning',
+            message: `Usuário criado, mas o e-mail não foi entregue.\n\n${emailMsg}\n\nCorrija o SMTP ou informe a senha temporária manualmente; após o e-mail funcionar, use "Resetar senha" na edição do usuário.`,
+          })
+        } else {
+          setMessageModal({
+            isOpen: true,
+            type: 'success',
+            message: 'Usuário criado com sucesso! O convite foi enviado por e-mail.',
+          })
+        }
+        return
       }
       onClose()
       setMessageModal({
         isOpen: true,
         type: 'success',
-        message: isEditing ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!'
+        message: 'Usuário atualizado com sucesso!',
       })
     } catch (error) {
       console.error('Erro ao salvar usuário:', error)
@@ -164,10 +183,14 @@ export default function UserModal({ isOpen, onClose, user = null }) {
       onConfirm: async () => {
         try {
           const result = await resetPassword.mutateAsync(user.id)
+          const sent = result?.emailSent !== false && result?.EmailSent !== false
           setMessageModal({
             isOpen: true,
-            type: 'success',
-            message: result?.message || 'Senha resetada com sucesso! Um email com a nova senha temporária foi enviado.'
+            type: sent ? 'success' : 'warning',
+            message: sent
+              ? result?.message || 'Senha resetada. Um e-mail com a nova senha temporária foi enviado.'
+              : (result?.message ||
+                  'Senha alterada no sistema, mas o e-mail não foi entregue. Abra o usuário para ver o motivo e informe a nova senha manualmente.'),
           })
         } catch (error) {
           console.error('Erro ao resetar senha:', error)
@@ -229,6 +252,26 @@ export default function UserModal({ isOpen, onClose, user = null }) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {isEditing &&
+          (user?.emailDeliveryFailedAt != null || user?.EmailDeliveryFailedAt != null) &&
+          (user?.emailDeliveryFailureMessage || user?.EmailDeliveryFailureMessage) && (
+            <div
+              className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900"
+              role="alert"
+            >
+              <MailWarning className="h-6 w-6 flex-shrink-0 text-amber-600" />
+              <div className="min-w-0 text-sm">
+                <p className="font-semibold text-amber-800">E-mail não entregue ao usuário</p>
+                <p className="mt-1 whitespace-pre-wrap break-words text-amber-900/90">
+                  {user.emailDeliveryFailureMessage || user.EmailDeliveryFailureMessage}
+                </p>
+                <p className="mt-2 text-xs text-amber-800/80">
+                  Corrija o SMTP, use &quot;Resetar senha&quot; após o envio funcionar ou repasse a senha
+                  temporária manualmente. Este aviso some quando um e-mail for enviado com sucesso.
+                </p>
+              </div>
+            </div>
+          )}
         {/* Informações Básicas - Mostrar apenas quando não está editando ou quando a aba 'basic' está ativa */}
         {(!isEditing || activeTab === 'basic') && (
           <>
