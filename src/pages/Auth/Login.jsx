@@ -36,15 +36,12 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo */}
-        <div className="flex justify-center">
-          <BrandLogo className="h-14 sm:h-16 w-auto max-w-[280px] object-contain mx-auto" />
+        <div className="flex justify-center px-2">
+          <BrandLogo className="h-20 sm:h-24 md:h-[6.5rem] w-auto max-w-[min(100%,420px)] object-contain mx-auto" />
         </div>
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Faça login para acessar sua conta
-        </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="card py-8 px-4 shadow-lg sm:rounded-2xl sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Mensagem de erro */}
@@ -147,14 +144,6 @@ export default function Login() {
           </form>
 
         </div>
-
-        {/* Footer */}
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Não tem uma conta?{' '}
-          <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-            Solicite acesso
-          </a>
-        </p>
       </div>
     </div>
   )

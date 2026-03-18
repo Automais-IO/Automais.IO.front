@@ -7,33 +7,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta Roxa Principal
+        // Paleta roxa principal (tons mais escuros)
         primary: {
-          50: '#faf5ff',
-          100: '#f3e8ff',
-          200: '#e9d5ff',
-          300: '#d8b4fe',
-          400: '#c084fc',
-          500: '#a855f7',  // Principal
-          600: '#9333ea',
-          700: '#7e22ce',
-          800: '#6b21a8',
-          900: '#581c87',
-          950: '#3b0764',
+          50: '#f4f0ff',
+          100: '#e8e0ff',
+          200: '#d4c5fd',
+          300: '#b8a0f5',
+          400: '#8b6ad8',
+          500: '#5b21b6',
+          600: '#4a1896',
+          700: '#3d1579',
+          800: '#321263',
+          900: '#1e0b3d',
+          950: '#120726',
         },
-        // Secundária (Roxo Azulado)
         secondary: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50: '#f0edff',
+          100: '#e0d9ff',
+          200: '#c9b8fc',
+          300: '#a78eef',
+          400: '#7c5cd4',
+          500: '#4c1d95',
+          600: '#3d1579',
+          700: '#321263',
+          800: '#28104f',
+          900: '#1a0a35',
+          950: '#0f061f',
         },
         // Acento (Rosa/Magenta)
         accent: {
@@ -80,12 +79,12 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        'purple': '0 4px 14px 0 rgba(168, 85, 247, 0.25)',
-        'purple-lg': '0 10px 40px 0 rgba(168, 85, 247, 0.3)',
+        purple: '0 4px 14px 0 rgba(59, 7, 100, 0.35)',
+        'purple-lg': '0 10px 40px 0 rgba(45, 5, 80, 0.4)',
       },
       backgroundImage: {
-        'gradient-purple': 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
-        'gradient-purple-pink': 'linear-gradient(135deg, #a855f7 0%, #d946ef 100%)',
+        'gradient-purple': 'linear-gradient(145deg, #4c1d95 0%, #2e1065 55%, #1e0b3d 100%)',
+        'gradient-purple-pink': 'linear-gradient(135deg, #5b21b6 0%, #4a1896 100%)',
       },
     },
   },

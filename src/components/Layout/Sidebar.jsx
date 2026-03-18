@@ -51,13 +51,10 @@ export default function Sidebar() {
   const userRole = getUserRole()
 
   return (
-    <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
+    <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
       <div className="flex flex-col flex-grow bg-gradient-purple overflow-y-auto shadow-purple-lg">
-        {/* Logo */}
-        <div className="flex items-center justify-center min-h-16 py-3 px-4 bg-black/10">
-          <div className="rounded-lg bg-white/95 px-4 py-2 shadow-sm">
-            <BrandLogo className="h-8 w-auto max-w-[200px] object-contain" alt="Automais" />
-          </div>
+        <div className="flex items-center justify-center py-6 px-3 bg-transparent border-b border-white/10">
+          <BrandLogo className="h-[5rem] sm:h-[5.5rem] w-auto max-w-[min(100%,300px)] object-contain drop-shadow-[0_2px_12px_rgba(0,0,0,0.25)]" alt="Automais" />
         </div>
 
         {/* Tenant Info */}

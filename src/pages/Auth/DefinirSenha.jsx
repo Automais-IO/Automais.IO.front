@@ -40,8 +40,8 @@ export default function DefinirSenha() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <BrandLogo className="h-12 sm:h-14 w-auto max-w-[260px] object-contain mx-auto" />
+        <div className="flex justify-center px-2">
+          <BrandLogo className="h-20 sm:h-24 md:h-[6.5rem] w-auto max-w-[min(100%,420px)] object-contain mx-auto" />
         </div>
         <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">Definir nova senha</h2>
         <p className="mt-2 text-center text-sm text-gray-600 px-4">

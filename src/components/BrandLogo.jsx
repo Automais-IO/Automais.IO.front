@@ -5,6 +5,9 @@ import automaisLogo from '../img/Automais_logo.png'
  * @param {string} className - classes Tailwind (ex.: h-10 w-auto max-w-[200px])
  * @param {string} alt
  */
-export default function BrandLogo({ className = 'h-10 w-auto max-w-[220px] object-contain', alt = 'Automais' }) {
+export default function BrandLogo({
+  className = 'h-16 w-auto max-w-[min(100%,360px)] object-contain object-center',
+  alt = 'Automais',
+}) {
   return <img src={automaisLogo} alt={alt} className={className} />
 }
