@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
   ArrowLeft, 
@@ -30,6 +30,18 @@ const TABS = {
   ROUTES: 'routes',
   INTERFACES: 'interfaces',
   TERMINAL: 'terminal'
+}
+
+/** apiUsername / apiPasswordTemporaria + apiPassword (compat nomes antigos) */
+function routerApiUsername(r) {
+  if (!r) return 'admin'
+  return r.apiUsername || r.routerOsApiUsername || 'admin'
+}
+function routerApiPasswordForConnection(r) {
+  if (!r) return ''
+  const temp = (r.apiPasswordTemporaria || r.routerOsApiPassword || '').trim()
+  const perm = (r.apiPassword || r.automaisApiPassword || '').trim()
+  return temp || perm
 }
 
 export default function RouterManagement() {
@@ -272,8 +284,8 @@ export default function RouterManagement() {
         return
       }
 
-      const username = router.routerOsApiUsername || 'admin'
-      const password = router.routerOsApiPassword || ''
+      const username = routerApiUsername(router)
+      const password = routerApiPasswordForConnection(router)
 
       let command = ''
       switch (activeTab) {
@@ -444,8 +456,8 @@ export default function RouterManagement() {
         throw new Error('IP do router não encontrado')
       }
 
-      const username = router.routerOsApiUsername || 'admin'
-      const password = router.routerOsApiPassword || ''
+      const username = routerApiUsername(router)
+      const password = routerApiPasswordForConnection(router)
 
       // Executar comando via WebSocket
       const result = await routerOsWebSocketService.executeCommand(
@@ -558,8 +570,8 @@ export default function RouterManagement() {
       throw new Error('IP do router não encontrado')
     }
 
-    const username = router.routerOsApiUsername || 'admin'
-    const password = router.routerOsApiPassword || ''
+    const username = routerApiUsername(router)
+    const password = routerApiPasswordForConnection(router)
 
     return await routerOsWebSocketService.executeCommand(
       routerId,
