@@ -7,7 +7,7 @@ import { authApi } from '../../services/authApi'
 
 export default function DefinirSenha() {
   const navigate = useNavigate()
-  const { user, completePasswordChange } = useAuth()
+  const { completePasswordChange } = useAuth()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -43,10 +43,8 @@ export default function DefinirSenha() {
         <div className="flex justify-center px-2">
           <BrandLogo className="h-20 sm:h-24 md:h-[6.5rem] w-auto max-w-[min(100%,420px)] object-contain mx-auto" />
         </div>
-        <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">Definir nova senha</h2>
-        <p className="mt-2 text-center text-sm text-gray-600 px-4">
-          Você entrou com uma senha temporária. Por segurança, escolha uma nova senha para continuar
-          {user?.name ? `, ${user.name}.` : '.'}
+        <p className="mt-5 text-center text-xs text-gray-500 tracking-wide">
+          Definir nova senha
         </p>
       </div>
 
