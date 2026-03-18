@@ -233,51 +233,92 @@ export default function Routers() {
               onClick={() => navigate(`/routers/${router.id}/management`)}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-primary-100 rounded-xl">
-                    <Radio className="w-6 h-6 text-primary-600" />
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="p-2 bg-primary-100 rounded-lg shrink-0">
+                    <Radio className="w-5 h-5 text-primary-600" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {router.name}
-                    </h3>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-gray-900">{router.name}</h3>
+                    <span
+                      className={clsx(
+                        'badge text-xs mt-0.5 inline-block',
+                        statusLabels[router.status]?.color || 'badge-gray'
+                      )}
+                    >
+                      {statusLabels[router.status]?.label || router.status}
+                    </span>
                     {router.serialNumber && (
                       <p className="text-xs text-gray-500 font-mono mt-1">
                         {router.serialNumber}
                       </p>
                     )}
                     {router.model && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {router.model}
-                      </p>
+                      <p className="text-sm text-gray-600 mt-1">{router.model}</p>
+                    )}
+                    {router.vpnNetworkId && !router.wireGuardPeerId && (
+                      <div className="mt-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 inline-block">
+                        VPN: sem peer WireGuard
+                      </div>
+                    )}
+                    {router.vpnNetworkId && router.wireGuardPeerId && !router.wireGuardPeerKeysConfigured && (
+                      <div className="mt-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded px-2 py-0.5 inline-block">
+                        Chaves peer incompletas
+                      </div>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={clsx(
-                      'badge',
-                      statusLabels[router.status]?.color || 'badge-gray'
-                    )}
+                <div className="flex gap-2 shrink-0 ml-2">
+                  {router.vpnNetworkId && router.wireGuardPeerId && (
+                    <button
+                      type="button"
+                      onClick={(e) => openRenewPeerConfirm(e, router)}
+                      className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+                      title="Renovar chaves do peer"
+                    >
+                      <KeyRound className="w-4 h-4 text-amber-600" />
+                    </button>
+                  )}
+                  {router.vpnNetworkId && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDownloadConfig(router.id, router.name)
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      title="Baixar configuração VPN (.conf)"
+                    >
+                      <Download className="w-4 h-4 text-gray-600" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(router)
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Editar"
                   >
-                    {statusLabels[router.status]?.label || router.status}
-                  </span>
+                    <Edit className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(router.id, router.name)
+                    }}
+                    className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Excluir"
+                    disabled={deleteRouter.isPending}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </button>
                 </div>
               </div>
 
               {router.description && (
                 <p className="text-sm text-gray-600 mb-4">{router.description}</p>
-              )}
-
-              {router.vpnNetworkId && !router.wireGuardPeerId && (
-                <div className="mb-3 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  VPN: peer WireGuard não encontrado — recrie o router com rede VPN ou crie o peer na API.
-                </div>
-              )}
-              {router.vpnNetworkId && router.wireGuardPeerId && !router.wireGuardPeerKeysConfigured && (
-                <div className="mb-3 text-xs font-medium text-red-800 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  Chaves do peer WireGuard incompletas — use Renovar chaves VPN ou contate o suporte.
-                </div>
               )}
 
               <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
@@ -358,53 +399,6 @@ export default function Routers() {
                   </div>
                 )
               })()}
-
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap items-center">
-                {router.vpnNetworkId && router.wireGuardPeerId && (
-                  <button
-                    type="button"
-                    onClick={(e) => openRenewPeerConfirm(e, router)}
-                    className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
-                    title="Renovar chaves do peer (router)"
-                  >
-                    <KeyRound className="w-4 h-4 text-amber-600" />
-                  </button>
-                )}
-                {router.vpnNetworkId && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDownloadConfig(router.id, router.name)
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    title="Baixar configuração VPN"
-                  >
-                    <Download className="w-4 h-4" />
-                    Config VPN
-                  </button>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(router)
-                  }}
-                  className="btn btn-secondary btn-sm"
-                >
-                  <Edit className="w-4 h-4" />
-                  Editar
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(router.id, router.name)
-                  }}
-                  className="btn btn-error btn-sm"
-                  disabled={deleteRouter.isPending}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Remover
-                </button>
-              </div>
             </div>
           ))}
         </div>
