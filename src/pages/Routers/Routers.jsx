@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Radio, Plus, Search, Trash2, Edit, AlertCircle, Download, Wifi, WifiOff, Cpu, HardDrive, Thermometer, KeyRound } from 'lucide-react'
 import { useRouters, useDeleteRouter } from '../../hooks/useRouters'
 import RouterModal from '../../components/Modal/RouterModal'
+import Modal from '../../components/Modal/Modal'
 import { routersApi } from '../../services/routersApi'
 import { useSignalR } from '../../hooks/useSignalR'
 import api from '../../services/api'
@@ -25,6 +26,8 @@ export default function Routers() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedRouter, setSelectedRouter] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [renewConfirmRouter, setRenewConfirmRouter] = useState(null)
+  const [renewResult, setRenewResult] = useState(null)
 
   const formatBytes = (bytes) => {
     if (!bytes || bytes === '0') return '0 B'
@@ -72,23 +75,30 @@ export default function Routers() {
     }
   }
 
-  const handleRegeneratePeerKeys = async (e, router) => {
+  const openRenewPeerConfirm = (e, router) => {
     e.stopPropagation()
     if (!router.wireGuardPeerId) return
-    if (
-      !window.confirm(
-        'Renovar as chaves WireGuard deste router?\n\n' +
-          'O túnel VPN cairá até você aplicar o novo arquivo .conf no MikroTik (baixe em Config VPN após confirmar).'
-      )
-    ) {
-      return
-    }
+    setRenewConfirmRouter(router)
+  }
+
+  const closeRenewPeerConfirm = () => setRenewConfirmRouter(null)
+
+  const handleConfirmRegeneratePeerKeys = async () => {
+    if (!renewConfirmRouter?.wireGuardPeerId) return
+    const router = renewConfirmRouter
+    setRenewConfirmRouter(null)
     try {
       await routersApi.regenerateWireGuardPeerKeys(router.wireGuardPeerId)
       await refetch()
-      window.alert('Chaves renovadas. Baixe novamente a Config VPN e importe no router.')
+      setRenewResult({
+        success: true,
+        message: 'Chaves renovadas. Baixe novamente a Config VPN e importe no router.'
+      })
     } catch (error) {
-      window.alert(error.response?.data?.message || error.message || 'Erro ao renovar chaves')
+      setRenewResult({
+        success: false,
+        message: error.response?.data?.message || error.message || 'Erro ao renovar chaves'
+      })
     }
   }
 
@@ -349,16 +359,15 @@ export default function Routers() {
                 )
               })()}
 
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap">
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap items-center">
                 {router.vpnNetworkId && router.wireGuardPeerId && (
                   <button
                     type="button"
-                    onClick={(e) => handleRegeneratePeerKeys(e, router)}
-                    className="btn btn-secondary btn-sm border-amber-300 text-amber-800 hover:bg-amber-50"
+                    onClick={(e) => openRenewPeerConfirm(e, router)}
+                    className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
                     title="Renovar chaves do peer (router)"
                   >
-                    <KeyRound className="w-4 h-4" />
-                    Renovar chaves VPN
+                    <KeyRound className="w-4 h-4 text-amber-600" />
                   </button>
                 )}
                 {router.vpnNetworkId && (
@@ -401,7 +410,7 @@ export default function Routers() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal editar router */}
       <RouterModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -410,6 +419,56 @@ export default function Routers() {
         }}
         router={selectedRouter}
       />
+
+      {/* Modal: confirmar renovar chaves do peer */}
+      <Modal
+        isOpen={!!renewConfirmRouter}
+        onClose={closeRenewPeerConfirm}
+        title="Renovar chaves WireGuard do router?"
+      >
+        {renewConfirmRouter && (
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Router: <strong>{renewConfirmRouter.name}</strong>
+            </p>
+            <p className="text-sm text-gray-600">
+              O túnel VPN cairá até você aplicar o novo arquivo .conf no MikroTik. Após confirmar, baixe novamente em &quot;Config VPN&quot; e importe no router.
+            </p>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button type="button" onClick={closeRenewPeerConfirm} className="btn btn-secondary">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRegeneratePeerKeys}
+                className="btn btn-primary bg-amber-600 hover:bg-amber-700"
+              >
+                Renovar chaves
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal: resultado da renovação */}
+      <Modal
+        isOpen={!!renewResult}
+        onClose={() => setRenewResult(null)}
+        title={renewResult?.success ? 'Sucesso' : 'Erro'}
+      >
+        {renewResult && (
+          <div className="space-y-4">
+            <p className={renewResult.success ? 'text-gray-700' : 'text-red-700'}>
+              {renewResult.message}
+            </p>
+            <div className="flex justify-end pt-4 border-t border-gray-200">
+              <button type="button" onClick={() => setRenewResult(null)} className="btn btn-primary">
+                Fechar
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

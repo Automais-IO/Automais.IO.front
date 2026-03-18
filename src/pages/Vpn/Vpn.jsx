@@ -38,6 +38,8 @@ export default function Vpn() {
   })
   const [formError, setFormError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [renewConfirmTarget, setRenewConfirmTarget] = useState(null)
+  const [renewResult, setRenewResult] = useState(null)
 
   useEffect(() => {
     loadNetworks()
@@ -178,27 +180,30 @@ export default function Vpn() {
     }
   }
 
-  const handleRegenerateServerKeys = async (e, network) => {
+  const openRenewConfirm = (e, network) => {
     e?.stopPropagation?.()
-    if (
-      !window.confirm(
-        'Renovar as chaves do servidor WireGuard desta rede?\n\n' +
-          'Todos os routers precisarão baixar novamente o arquivo .conf. O túnel VPN ficará inoperante até atualizar cada router.'
-      )
-    ) {
-      return
-    }
+    setRenewConfirmTarget(network)
+  }
+
+  const closeRenewConfirm = () => setRenewConfirmTarget(null)
+
+  const handleConfirmRegenerateServerKeys = async () => {
+    if (!renewConfirmTarget) return
+    const network = renewConfirmTarget
+    setRenewConfirmTarget(null)
     try {
       await vpnNetworksApi.regenerateServerKeys(network.id)
       await loadNetworks()
-      window.alert(
-        'Chaves do servidor renovadas. Baixe novamente a config VPN em cada router e aguarde o sync no servidor VPN.'
-      )
+      setRenewResult({
+        success: true,
+        message: 'Chaves do servidor renovadas. Baixe novamente a config VPN em cada router e aguarde o sync no servidor VPN.'
+      })
     } catch (error) {
       console.error(error)
-      window.alert(
-        error.response?.data?.message || error.message || 'Erro ao renovar chaves do servidor'
-      )
+      setRenewResult({
+        success: false,
+        message: error.response?.data?.message || error.message || 'Erro ao renovar chaves do servidor'
+      })
     }
   }
 
@@ -310,7 +315,7 @@ export default function Vpn() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={(e) => handleRegenerateServerKeys(e, network)}
+                    onClick={(e) => openRenewConfirm(e, network)}
                     className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
                     title="Renovar chaves do servidor"
                   >
@@ -545,6 +550,56 @@ export default function Vpn() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: confirmar renovar chaves do servidor */}
+      <Modal
+        isOpen={!!renewConfirmTarget}
+        onClose={closeRenewConfirm}
+        title="Renovar chaves do servidor WireGuard?"
+      >
+        {renewConfirmTarget && (
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Rede: <strong>{renewConfirmTarget.name}</strong>
+            </p>
+            <p className="text-sm text-gray-600">
+              Todos os routers desta rede precisarão baixar novamente o arquivo .conf. O túnel VPN ficará inoperante até atualizar cada router.
+            </p>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button type="button" onClick={closeRenewConfirm} className="btn btn-secondary">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRegenerateServerKeys}
+                className="btn btn-primary bg-amber-600 hover:bg-amber-700"
+              >
+                Renovar chaves
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal: resultado da renovação */}
+      <Modal
+        isOpen={!!renewResult}
+        onClose={() => setRenewResult(null)}
+        title={renewResult?.success ? 'Sucesso' : 'Erro'}
+      >
+        {renewResult && (
+          <div className="space-y-4">
+            <p className={renewResult.success ? 'text-gray-700' : 'text-red-700'}>
+              {renewResult.message}
+            </p>
+            <div className="flex justify-end pt-4 border-t border-gray-200">
+              <button type="button" onClick={() => setRenewResult(null)} className="btn btn-primary">
+                Fechar
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )
