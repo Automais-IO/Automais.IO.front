@@ -295,46 +295,52 @@ export default function Vpn() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredNetworks.map((network) => (
             <div key={network.id} className="card p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary-100 rounded-lg">
-                    <Network className="w-5 h-5 text-primary-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{network.name}</h3>
-                    {network.isDefault && (
-                      <span className="text-xs text-primary-600 font-medium">Padrão</span>
-                    )}
-                    {!network.serverKeysConfigured && (
-                      <div className="mt-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 inline-block">
-                        Sem chaves do servidor WireGuard
-                      </div>
-                    )}
-                  </div>
+              <div className="flex gap-3 mb-4">
+                <div className="p-2 bg-primary-100 rounded-lg shrink-0 self-start">
+                  <Network className="w-5 h-5 text-primary-600" />
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => openRenewConfirm(e, network)}
-                    className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
-                    title="Renovar chaves do servidor"
-                  >
-                    <KeyRound className="w-4 h-4 text-amber-600" />
-                  </button>
-                  <button
-                    onClick={() => handleOpenModal(network)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Editar"
-                  >
-                    <Edit className="w-4 h-4 text-gray-600" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(network.id)}
-                    className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Excluir"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </button>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900">{network.name}</h3>
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      {network.isDefault && (
+                        <span className="text-xs text-primary-600 font-medium bg-primary-50 px-2 py-0.5 rounded">
+                          Padrão
+                        </span>
+                      )}
+                      {!network.serverKeysConfigured && (
+                        <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                          Sem chaves do servidor
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => openRenewConfirm(e, network)}
+                        className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="Renovar chaves do servidor"
+                      >
+                        <KeyRound className="w-4 h-4 text-amber-600" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenModal(network)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(network.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
               
