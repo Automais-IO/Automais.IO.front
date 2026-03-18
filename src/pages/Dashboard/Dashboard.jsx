@@ -1,23 +1,20 @@
-import { 
-  Activity, 
-  Cpu, 
-  Radio, 
-  Users,
-  TrendingUp,
-  TrendingDown,
-  Signal,
-  AlertCircle,
-} from 'lucide-react'
+import { useMemo } from 'react'
+import { Cpu, Radio, Router, AlertCircle } from 'lucide-react'
 import StatCard from './StatCard'
 import RecentDevices from './RecentDevices'
 import ActivityChart from './ActivityChart'
 import GatewayStatus from './GatewayStatus'
 import { useTenant } from '../../hooks/useTenant'
-import { useAuth } from '../../contexts/AuthContext'
+import { useRouters } from '../../hooks/useRouters'
 
 export default function Dashboard() {
   const { data: tenant, isLoading: isLoadingTenant } = useTenant()
-  const { user } = useAuth()
+  const { data: routers } = useRouters()
+
+  const onlineRouters = useMemo(
+    () => (routers || []).filter((r) => r.status === 'Online').length,
+    [routers]
+  )
 
   const stats = [
     {
@@ -37,11 +34,11 @@ export default function Dashboard() {
       color: 'success',
     },
     {
-      name: 'Mensagens Hoje',
-      value: '0',
+      name: 'Routers Online',
+      value: String(onlineRouters),
       change: '0%',
       trend: 'neutral',
-      icon: Activity,
+      icon: Router,
       color: 'secondary',
     },
     {

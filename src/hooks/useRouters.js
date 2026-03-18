@@ -27,10 +27,10 @@ export const useRouters = () => {
       return data
     },
     enabled: !!tenantId,
-    // Atualizar automaticamente a cada 10 segundos
-    refetchInterval: 10000, // 10 segundos
-    // Manter dados em cache enquanto atualiza em background
-    refetchIntervalInBackground: true,
+    // Polling assíncrono: mais frequente com aba visível; pausa em background
+    refetchInterval: () =>
+      typeof document !== 'undefined' && document.hidden ? false : 8000,
+    refetchIntervalInBackground: false,
     // Não parar de atualizar quando a janela está em foco
     refetchOnWindowFocus: true,
     // Sempre mostrar dados atualizados, mesmo durante refetch
@@ -67,6 +67,20 @@ export const useRouters = () => {
             status: newStatus,
             lastSeenAt: newLastSeenAt,
             latency: newLatency,
+            routerOsApiAuthStatus:
+              data.routerOsApiAuthStatus !== undefined
+                ? data.routerOsApiAuthStatus
+                : data.RouterOsApiAuthStatus !== undefined
+                  ? data.RouterOsApiAuthStatus
+                  : router.routerOsApiAuthStatus,
+            routerOsApiAuthCheckedAt:
+              data.routerOsApiAuthCheckedAt ?? data.RouterOsApiAuthCheckedAt ?? router.routerOsApiAuthCheckedAt,
+            routerOsApiAuthMessage:
+              data.routerOsApiAuthMessage !== undefined
+                ? data.routerOsApiAuthMessage
+                : data.RouterOsApiAuthMessage !== undefined
+                  ? data.RouterOsApiAuthMessage
+                  : router.routerOsApiAuthMessage,
             // Atualizar outros campos se vierem no SignalR
             ...(data.hardwareInfo && { hardwareInfo: data.hardwareInfo }),
             ...(data.model && { model: data.model }),
@@ -82,9 +96,11 @@ export const useRouters = () => {
       const wasUpdated = updated.some((router, index) => {
         const oldRouter = oldData[index]
         return oldRouter && (
-          router.status !== oldRouter.status || 
+          router.status !== oldRouter.status ||
           router.lastSeenAt !== oldRouter.lastSeenAt ||
-          router.latency !== oldRouter.latency
+          router.latency !== oldRouter.latency ||
+          router.routerOsApiAuthStatus !== oldRouter.routerOsApiAuthStatus ||
+          router.routerOsApiAuthMessage !== oldRouter.routerOsApiAuthMessage
         )
       })
       

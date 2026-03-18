@@ -5,8 +5,6 @@ import { vpnNetworksApi } from '../../services/vpnNetworksApi'
 import { routerStaticRoutesApi } from '../../services/routerStaticRoutesApi'
 import { getTenantId } from '../../config/tenant'
 import { Plus, Edit, Trash2, X, Check, ChevronDown, ChevronUp } from 'lucide-react'
-import api from '../../services/api'
-
 export default function RouterModal({ isOpen, onClose, router = null }) {
   const isEditing = !!router
   const createRouter = useCreateRouter()
@@ -14,9 +12,6 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
 
   const [formData, setFormData] = useState({
     name: router?.name || '',
-    routerOsApiUrl: router?.routerOsApiUrl || '',
-    routerOsApiUsername: '',
-    routerOsApiPassword: '',
     vpnNetworkId: router?.vpnNetworkId || '',
     allowedNetworks: router?.allowedNetworks?.join('\n') || '',
     description: router?.description || '',
@@ -96,20 +91,13 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
     if (router) {
       setFormData({
         name: router.name || '',
-        routerOsApiUrl: router.routerOsApiUrl || '',
-        routerOsApiUsername: router.routerOsApiUsername || '',
-        routerOsApiPassword: '', // Não preencher senha por segurança
         vpnNetworkId: router.vpnNetworkId ? String(router.vpnNetworkId) : '',
         allowedNetworks: router.allowedNetworks?.join('\n') || '',
         description: router.description || '',
       })
     } else {
-      // Limpar formulário quando não há router (criar novo)
       setFormData({
         name: '',
-        routerOsApiUrl: '',
-        routerOsApiUsername: '',
-        routerOsApiPassword: '',
         vpnNetworkId: '',
         allowedNetworks: '',
         description: '',
@@ -309,10 +297,7 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
     if (!formData.name.trim()) {
       newErrors.name = 'Nome é obrigatório'
     }
-    if (formData.routerOsApiUrl && !formData.routerOsApiUrl.startsWith('http')) {
-      newErrors.routerOsApiUrl = 'URL deve começar com http:// ou https://'
-    }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -326,15 +311,13 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
       // Preparar dados para envio
       const dataToSend = {
         ...formData,
-        // Converter allowedNetworks de string (separada por \n) para array
         allowedNetworks: formData.allowedNetworks
           ? formData.allowedNetworks.split('\n').map(n => n.trim()).filter(n => n)
           : undefined,
-        // Converter vpnNetworkId para null se vazio
         vpnNetworkId: formData.vpnNetworkId || null,
       }
-
       if (isEditing) {
+        dataToSend.routerOsApiUrl = ''
         await updateRouter.mutateAsync({
           id: router.id,
           data: dataToSend,
@@ -343,12 +326,8 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
         await createRouter.mutateAsync(dataToSend)
       }
       onClose()
-      // Reset form
       setFormData({
         name: '',
-        routerOsApiUrl: '',
-        routerOsApiUsername: '',
-        routerOsApiPassword: '',
         vpnNetworkId: '',
         allowedNetworks: '',
         description: '',
@@ -381,53 +360,6 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
           {errors.name && (
             <p className="mt-1 text-sm text-red-600">{errors.name}</p>
           )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            URL da API RouterOS
-          </label>
-          <input
-            type="text"
-            name="routerOsApiUrl"
-            value={formData.routerOsApiUrl}
-            onChange={handleChange}
-            className={`input w-full ${errors.routerOsApiUrl ? 'border-red-500' : ''}`}
-            placeholder="Ex: http://192.168.1.1"
-          />
-          {errors.routerOsApiUrl && (
-            <p className="mt-1 text-sm text-red-600">{errors.routerOsApiUrl}</p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Usuário API
-            </label>
-            <input
-              type="text"
-              name="routerOsApiUsername"
-              value={formData.routerOsApiUsername}
-              onChange={handleChange}
-              className="input w-full"
-              placeholder="admin"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Senha API
-            </label>
-            <input
-              type="password"
-              name="routerOsApiPassword"
-              value={formData.routerOsApiPassword}
-              onChange={handleChange}
-              className="input w-full"
-              placeholder="••••••••"
-            />
-          </div>
         </div>
 
         <div className="border-t border-gray-200 pt-4">

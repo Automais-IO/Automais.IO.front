@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Radio, Plus, Search, Trash2, Edit, AlertCircle, Download, Wifi, WifiOff, Cpu, HardDrive, Thermometer, KeyRound } from 'lucide-react'
+import { Radio, Plus, Search, Trash2, Edit, AlertCircle, Download, Wifi, WifiOff, Cpu, HardDrive, Thermometer, KeyRound, Terminal } from 'lucide-react'
 import { useRouters, useDeleteRouter } from '../../hooks/useRouters'
 import RouterModal from '../../components/Modal/RouterModal'
 import Modal from '../../components/Modal/Modal'
@@ -10,10 +10,30 @@ import api from '../../services/api'
 import clsx from 'clsx'
 
 const statusLabels = {
-  Online: { label: 'Online', color: 'badge-success' },
-  Offline: { label: 'Offline', color: 'badge-gray' },
+  Online: { label: 'VPN online', color: 'badge-success' },
+  Offline: { label: 'VPN offline', color: 'badge-gray' },
   Maintenance: { label: 'Manutenção', color: 'badge-warning' },
   Error: { label: 'Erro', color: 'badge-error' },
+}
+
+/** Status da API RouterOS (8728), independente da VPN */
+const apiAuthStatusOrder = ['Unknown', 'Ok', 'AuthFailed', 'Unreachable']
+
+function normalizeRouterOsApiAuthStatus(v) {
+  if (v === undefined || v === null) return 'Unknown'
+  const n = Number(v)
+  if (!Number.isNaN(n) && n >= 0 && n < apiAuthStatusOrder.length) {
+    return apiAuthStatusOrder[n]
+  }
+  const s = String(v)
+  return apiAuthStatusOrder.includes(s) ? s : 'Unknown'
+}
+
+const apiAuthLabels = {
+  Unknown: { label: 'API não verificada', color: 'badge-gray', hint: 'Aguardando checagem do serviço RouterOS' },
+  Ok: { label: 'API OK', color: 'badge-success', hint: 'Autenticação RouterOS (8728) funcionando' },
+  AuthFailed: { label: 'API: auth falhou', color: 'badge-error', hint: 'Usuário/senha incorretos ou sem permissão' },
+  Unreachable: { label: 'API inacessível', color: 'badge-warning', hint: 'Firewall, rota ou porta 8728' },
 }
 
 export default function Routers() {
@@ -134,7 +154,11 @@ export default function Routers() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Routers</h1>
             <p className="mt-1 text-sm text-gray-600">
-              Gerencie seus routers MikroTik
+              Gerencie seus routers MikroTik —{' '}
+              <span className="text-gray-500">
+                <strong className="text-gray-700">VPN</strong> = túnel WireGuard;{' '}
+                <strong className="text-gray-700">API</strong> = RouterOS porta 8728
+              </span>
             </p>
           </div>
           {/* Indicador de conexão SignalR e atualização */}
@@ -244,10 +268,33 @@ export default function Routers() {
                         'badge text-xs shrink-0',
                         statusLabels[router.status]?.color || 'badge-gray'
                       )}
+                      title="Status do túnel WireGuard (servidor VPN)"
                     >
                       {statusLabels[router.status]?.label || router.status}
                     </span>
+                    {(() => {
+                      const apiKey = normalizeRouterOsApiAuthStatus(router.routerOsApiAuthStatus)
+                      const apiMeta = apiAuthLabels[apiKey] || apiAuthLabels.Unknown
+                      const apiTitle =
+                        [apiMeta.hint, router.routerOsApiAuthMessage].filter(Boolean).join(' — ') ||
+                        apiMeta.hint
+                      return (
+                        <span
+                          className={clsx('badge text-xs shrink-0 inline-flex items-center gap-1', apiMeta.color)}
+                          title={apiTitle}
+                        >
+                          <Terminal className="w-3 h-3 opacity-80" />
+                          {apiMeta.label}
+                        </span>
+                      )
+                    })()}
                   </div>
+                  {router.routerOsApiAuthMessage &&
+                    normalizeRouterOsApiAuthStatus(router.routerOsApiAuthStatus) !== 'Ok' && (
+                      <p className="text-xs text-amber-800 bg-amber-50/80 rounded px-2 py-1 mt-1 line-clamp-2">
+                        {router.routerOsApiAuthMessage}
+                      </p>
+                    )}
                   <div className="flex justify-end gap-2 mt-1">
                     {router.vpnNetworkId && router.wireGuardPeerId && (
                       <button
