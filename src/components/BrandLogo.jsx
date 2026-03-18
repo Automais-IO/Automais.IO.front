@@ -6,7 +6,7 @@ import automaisLogo from '../img/Automais_logo.png'
  * @param {string} alt
  */
 export default function BrandLogo({
-  className = 'h-16 w-auto max-w-[min(100%,360px)] object-contain object-center',
+  className = 'h-[4em] w-auto max-w-[min(100%,360px)] object-contain object-center',
   alt = 'Automais',
 }) {
   return <img src={automaisLogo} alt={alt} className={className} />

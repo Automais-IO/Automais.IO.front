@@ -1,5 +1,5 @@
 import { Lock } from 'lucide-react'
-import BrandLogo from '../../components/BrandLogo'
+import AuthBrandHeader from '../../components/AuthBrandHeader'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -40,10 +40,8 @@ export default function DefinirSenha() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center px-2">
-          <BrandLogo className="h-20 sm:h-24 md:h-[6.5rem] w-auto max-w-[min(100%,420px)] object-contain mx-auto" />
-        </div>
-        <p className="mt-5 text-center text-xs text-gray-500 tracking-wide">
+        <AuthBrandHeader />
+        <p className="mt-4 text-center text-xs text-gray-500 tracking-wide">
           Definir nova senha
         </p>
       </div>

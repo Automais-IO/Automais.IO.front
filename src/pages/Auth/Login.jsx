@@ -1,5 +1,5 @@
 import { Mail, Lock, ArrowRight } from 'lucide-react'
-import BrandLogo from '../../components/BrandLogo'
+import AuthBrandHeader from '../../components/AuthBrandHeader'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -35,10 +35,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        {/* Logo */}
-        <div className="flex justify-center px-2">
-          <BrandLogo className="h-20 sm:h-24 md:h-[6.5rem] w-auto max-w-[min(100%,420px)] object-contain mx-auto" />
-        </div>
+        <AuthBrandHeader />
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
