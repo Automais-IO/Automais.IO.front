@@ -64,5 +64,10 @@ export const routersApi = {
     link.remove()
     window.URL.revokeObjectURL(url)
   },
+
+  regenerateWireGuardPeerKeys: async (peerId) => {
+    const response = await api.post(`/wireguard/peers/${peerId}/regenerate-keys`)
+    return response.data
+  },
 }
 

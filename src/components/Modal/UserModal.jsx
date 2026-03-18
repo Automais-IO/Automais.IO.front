@@ -163,11 +163,11 @@ export default function UserModal({ isOpen, onClose, user = null }) {
       message: `Deseja realmente resetar a senha do usuário "${user.name}"? Uma nova senha temporária será enviada por email.`,
       onConfirm: async () => {
         try {
-          await resetPassword.mutateAsync(user.id)
+          const result = await resetPassword.mutateAsync(user.id)
           setMessageModal({
             isOpen: true,
             type: 'success',
-            message: 'Senha resetada com sucesso! Um email com a nova senha temporária foi enviado.'
+            message: result?.message || 'Senha resetada com sucesso! Um email com a nova senha temporária foi enviado.'
           })
         } catch (error) {
           console.error('Erro ao resetar senha:', error)

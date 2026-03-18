@@ -30,6 +30,11 @@ export const vpnNetworksApi = {
     await api.delete(`/vpn/networks/${networkId}`)
   },
 
+  regenerateServerKeys: async (networkId) => {
+    const response = await api.post(`/vpn/networks/${networkId}/regenerate-server-keys`)
+    return response.data
+  },
+
   // Listar usuários da rede VPN
   getUsers: async (networkId) => {
     const response = await api.get(`/vpn/networks/${networkId}/users`)

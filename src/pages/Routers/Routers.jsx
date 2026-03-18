@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Radio, Plus, Search, Trash2, Edit, AlertCircle, Download, Wifi, WifiOff, Cpu, HardDrive, Thermometer } from 'lucide-react'
+import { Radio, Plus, Search, Trash2, Edit, AlertCircle, Download, Wifi, WifiOff, Cpu, HardDrive, Thermometer, KeyRound } from 'lucide-react'
 import { useRouters, useDeleteRouter } from '../../hooks/useRouters'
 import RouterModal from '../../components/Modal/RouterModal'
 import { routersApi } from '../../services/routersApi'
@@ -69,6 +69,26 @@ export default function Routers() {
       await routersApi.downloadVpnConfig(routerId)
     } catch (error) {
         alert(error.message || 'Erro ao baixar configuração VPN')
+    }
+  }
+
+  const handleRegeneratePeerKeys = async (e, router) => {
+    e.stopPropagation()
+    if (!router.wireGuardPeerId) return
+    if (
+      !window.confirm(
+        'Renovar as chaves WireGuard deste router?\n\n' +
+          'O túnel VPN cairá até você aplicar o novo arquivo .conf no MikroTik (baixe em Config VPN após confirmar).'
+      )
+    ) {
+      return
+    }
+    try {
+      await routersApi.regenerateWireGuardPeerKeys(router.wireGuardPeerId)
+      await refetch()
+      window.alert('Chaves renovadas. Baixe novamente a Config VPN e importe no router.')
+    } catch (error) {
+      window.alert(error.response?.data?.message || error.message || 'Erro ao renovar chaves')
     }
   }
 
@@ -239,6 +259,17 @@ export default function Routers() {
                 <p className="text-sm text-gray-600 mb-4">{router.description}</p>
               )}
 
+              {router.vpnNetworkId && !router.wireGuardPeerId && (
+                <div className="mb-3 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  VPN: peer WireGuard não encontrado — recrie o router com rede VPN ou crie o peer na API.
+                </div>
+              )}
+              {router.vpnNetworkId && router.wireGuardPeerId && !router.wireGuardPeerKeysConfigured && (
+                <div className="mb-3 text-xs font-medium text-red-800 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  Chaves do peer WireGuard incompletas — use Renovar chaves VPN ou contate o suporte.
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
                 <div>
                   <div className="text-xs text-gray-600 mb-1">Firmware</div>
@@ -318,7 +349,18 @@ export default function Routers() {
                 )
               })()}
 
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 flex-wrap">
+                {router.vpnNetworkId && router.wireGuardPeerId && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleRegeneratePeerKeys(e, router)}
+                    className="btn btn-secondary btn-sm border-amber-300 text-amber-800 hover:bg-amber-50"
+                    title="Renovar chaves do peer (router)"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    Renovar chaves VPN
+                  </button>
+                )}
                 {router.vpnNetworkId && (
                   <button
                     onClick={(e) => {

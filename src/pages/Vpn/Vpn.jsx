@@ -1,8 +1,25 @@
 import { useState, useEffect } from 'react'
-import { Plus, Network, Edit, Trash2, Shield, Search } from 'lucide-react'
+import { Plus, Network, Edit, Trash2, Shield, Search, KeyRound } from 'lucide-react'
 import { vpnNetworksApi } from '../../services/vpnNetworksApi'
 import { getTenantId } from '../../config/tenant'
 import Modal from '../../components/Modal/Modal'
+
+function normalizeVpnEndpoint(s) {
+  return (s || '').trim().toLowerCase()
+}
+
+/** Portas já usadas no mesmo endpoint por outras redes (exclui networkId se edição) */
+function getConflictingNetwork(networks, endpoint, port, excludeId) {
+  const ep = normalizeVpnEndpoint(endpoint)
+  const p = Number(port)
+  if (!ep || !Number.isFinite(p)) return null
+  return networks.find(
+    (n) =>
+      normalizeVpnEndpoint(n.serverEndpoint) === ep &&
+      Number(n.listenPort) === p &&
+      n.id !== excludeId
+  ) || null
+}
 
 export default function Vpn() {
   const [networks, setNetworks] = useState([])
@@ -16,8 +33,10 @@ export default function Vpn() {
     description: '',
     dnsServers: '',
     serverEndpoint: 'automais.io',
+    listenPort: '',
     isDefault: false,
   })
+  const [formError, setFormError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -39,8 +58,10 @@ export default function Vpn() {
   }
 
   const handleOpenModal = (network = null) => {
+    setFormError('')
     setSelectedNetwork(network)
     if (network) {
+      const lp = network.listenPort != null && network.listenPort > 0 ? String(network.listenPort) : '51820'
       setFormData({
         name: network.name || '',
         slug: network.slug || '',
@@ -48,6 +69,7 @@ export default function Vpn() {
         description: network.description || '',
         dnsServers: network.dnsServers || '',
         serverEndpoint: network.serverEndpoint || 'automais.io',
+        listenPort: lp,
         isDefault: network.isDefault || false,
       })
     } else {
@@ -58,6 +80,7 @@ export default function Vpn() {
         description: '',
         dnsServers: '',
         serverEndpoint: 'automais.io',
+        listenPort: '',
         isDefault: false,
       })
     }
@@ -67,30 +90,115 @@ export default function Vpn() {
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedNetwork(null)
+    setFormError('')
     setFormData({
       name: '',
       slug: '',
       cidr: '',
       description: '',
       dnsServers: '',
+      serverEndpoint: 'automais.io',
+      listenPort: '',
       isDefault: false,
     })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    try {
-      const tenantId = getTenantId()
-      if (selectedNetwork) {
-        await vpnNetworksApi.update(selectedNetwork.id, formData)
-      } else {
-        await vpnNetworksApi.create(tenantId, formData)
+    setFormError('')
+    const tenantId = getTenantId()
+    const endpoint = (formData.serverEndpoint || '').trim() || 'automais.io'
+
+    if (selectedNetwork) {
+      const port = parseInt(String(formData.listenPort).trim(), 10)
+      if (!Number.isFinite(port) || port < 1 || port > 65535) {
+        setFormError('Porta UDP deve ser um número entre 1 e 65535.')
+        return
       }
+      const conflict = getConflictingNetwork(networks, endpoint, port, selectedNetwork.id)
+      if (conflict) {
+        setFormError(
+          `A porta ${port} já está em uso pela rede "${conflict.name}" no mesmo endpoint. Escolha outra porta ou altere o endpoint.`
+        )
+        return
+      }
+      try {
+        await vpnNetworksApi.update(selectedNetwork.id, {
+          name: formData.name,
+          description: formData.description,
+          dnsServers: formData.dnsServers,
+          serverEndpoint: endpoint,
+          isDefault: formData.isDefault,
+          listenPort: port,
+        })
+        handleCloseModal()
+        loadNetworks()
+      } catch (error) {
+        console.error('Erro ao salvar rede VPN:', error)
+        const msg = error.response?.data?.message || error.message || 'Erro desconhecido'
+        setFormError(msg)
+      }
+      return
+    }
+
+    const createPayload = {
+      name: formData.name,
+      slug: formData.slug,
+      cidr: formData.cidr,
+      description: formData.description || undefined,
+      dnsServers: formData.dnsServers || undefined,
+      serverEndpoint: endpoint,
+      isDefault: formData.isDefault,
+    }
+    const portStr = String(formData.listenPort || '').trim()
+    if (portStr !== '') {
+      const port = parseInt(portStr, 10)
+      if (!Number.isFinite(port) || port < 1 || port > 65535) {
+        setFormError('Porta UDP deve ser um número entre 1 e 65535.')
+        return
+      }
+      const conflict = getConflictingNetwork(networks, endpoint, port, null)
+      if (conflict) {
+        setFormError(
+          `A porta ${port} já está em uso pela rede "${conflict.name}" no mesmo endpoint. Escolha outra porta ou deixe em branco para alocação automática.`
+        )
+        return
+      }
+      createPayload.listenPort = port
+    }
+
+    try {
+      await vpnNetworksApi.create(tenantId, createPayload)
       handleCloseModal()
       loadNetworks()
     } catch (error) {
       console.error('Erro ao salvar rede VPN:', error)
-      alert('Erro ao salvar rede VPN: ' + (error.response?.data?.message || error.message || 'Erro desconhecido'))
+      const msg = error.response?.data?.message || error.message || 'Erro desconhecido'
+      setFormError(msg)
+    }
+  }
+
+  const handleRegenerateServerKeys = async (e, network) => {
+    e?.stopPropagation?.()
+    if (
+      !window.confirm(
+        'Renovar as chaves do servidor WireGuard desta rede?\n\n' +
+          'Todos os routers precisarão baixar novamente o arquivo .conf. O túnel VPN ficará inoperante até atualizar cada router.'
+      )
+    ) {
+      return
+    }
+    try {
+      await vpnNetworksApi.regenerateServerKeys(network.id)
+      await loadNetworks()
+      window.alert(
+        'Chaves do servidor renovadas. Baixe novamente a config VPN em cada router e aguarde o sync no servidor VPN.'
+      )
+    } catch (error) {
+      console.error(error)
+      window.alert(
+        error.response?.data?.message || error.message || 'Erro ao renovar chaves do servidor'
+      )
     }
   }
 
@@ -107,11 +215,15 @@ export default function Vpn() {
     }
   }
 
-  const filteredNetworks = networks.filter(network =>
-    network.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    network.cidr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (network.slug && network.slug.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  const filteredNetworks = networks.filter((network) => {
+    const q = searchTerm.toLowerCase()
+    return (
+      network.name.toLowerCase().includes(q) ||
+      network.cidr.toLowerCase().includes(q) ||
+      (network.slug && network.slug.toLowerCase().includes(q)) ||
+      String(network.listenPort || '').includes(q)
+    )
+  })
 
   if (loading) {
     return (
@@ -188,9 +300,22 @@ export default function Vpn() {
                     {network.isDefault && (
                       <span className="text-xs text-primary-600 font-medium">Padrão</span>
                     )}
+                    {!network.serverKeysConfigured && (
+                      <div className="mt-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 inline-block">
+                        Sem chaves do servidor WireGuard
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => handleRegenerateServerKeys(e, network)}
+                    className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
+                    title="Renovar chaves do servidor"
+                  >
+                    <KeyRound className="w-4 h-4 text-amber-600" />
+                  </button>
                   <button
                     onClick={() => handleOpenModal(network)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -231,6 +356,12 @@ export default function Vpn() {
                     <span className="font-mono text-gray-900">{network.serverEndpoint}</span>
                   </div>
                 )}
+                <div>
+                  <span className="text-gray-600">Porta UDP (WireGuard):</span>{' '}
+                  <span className="font-mono font-medium text-primary-700">
+                    {network.listenPort != null && network.listenPort > 0 ? network.listenPort : 51820}
+                  </span>
+                </div>
                 {network.description && (
                   <div className="text-gray-600 text-xs mt-2">
                     {network.description}
@@ -249,6 +380,14 @@ export default function Vpn() {
         title={selectedNetwork ? 'Editar Rede VPN' : 'Nova Rede VPN'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div
+              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+              role="alert"
+            >
+              {formError}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nome <span className="text-red-500">*</span>
@@ -325,6 +464,44 @@ export default function Vpn() {
               Endpoint do servidor WireGuard (ex: automais.io). Este valor será usado nos arquivos .conf gerados.
             </p>
           </div>
+
+          {selectedNetwork ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Porta UDP (WireGuard) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                value={formData.listenPort}
+                onChange={(e) => setFormData({ ...formData, listenPort: e.target.value })}
+                className="input w-full font-mono"
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Deve ser única entre todas as redes VPN com o mesmo endpoint. A API também valida ao salvar.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Porta UDP (opcional)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                value={formData.listenPort}
+                onChange={(e) => setFormData({ ...formData, listenPort: e.target.value })}
+                className="input w-full font-mono"
+                placeholder="Ex: 51821 — vazio = automática"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Se vazio, o servidor aloca a próxima porta livre (a partir de 51820) neste endpoint.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
