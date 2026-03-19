@@ -546,6 +546,21 @@ class RouterOsWebSocketService {
       } else {
         resolve(data)
       }
+    } else if (data.error) {
+      // Servidor enviou erro sem id (ex.: API fechou a conexão com mensagem de erro)
+      // Rejeitar a primeira requisição pendente para exibir a mensagem real ao usuário
+      const pendingIds = Array.from(this.pendingRequests.keys())
+      if (pendingIds.length > 0) {
+        const id = pendingIds[0]
+        const entry = this.pendingRequests.get(id)
+        if (entry) {
+          clearTimeout(entry.timeoutId)
+          this.pendingRequests.delete(id)
+          const errorMessage = this.sanitizeString(data.error)
+          entry.reject(new Error(errorMessage))
+        }
+      }
+      this.emit('message', data)
     } else {
       // É uma mensagem não solicitada (evento)
       this.emit('message', data)
