@@ -132,6 +132,8 @@ export default function RouterManagement() {
         }
         await routerOsWebSocketService.connect(routerId)
         wsConnectedRef.current = true
+        // Aguardar o proxy C#→Python estabilizar antes de enviar get_status (evita mensagem perdida)
+        await new Promise(r => setTimeout(r, 500))
       }
 
       // Obter IP do router (pode ser null - o backend buscará do peer WireGuard se necessário)
@@ -151,7 +153,10 @@ export default function RouterManagement() {
         resource: status.resource,
         error: status.error
       })
-      
+      if (!status.connected && status.error) {
+        setError(status.error)
+      }
+
       // Se conectou, atualizar informações do sistema
       if (status.connected && status.resource) {
         const resource = status.resource
