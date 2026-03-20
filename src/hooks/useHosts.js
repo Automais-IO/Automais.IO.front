@@ -52,3 +52,15 @@ export const useDeleteHost = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['hosts', tenantId] }),
   })
 }
+
+export const useActivateSetup = () => {
+  const qc = useQueryClient()
+  const tenantId = getTenantId()
+  return useMutation({
+    mutationFn: (id) => hostsApi.activateSetup(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['host', id] })
+      qc.invalidateQueries({ queryKey: ['hosts', tenantId] })
+    },
+  })
+}

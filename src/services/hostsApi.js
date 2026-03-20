@@ -25,4 +25,9 @@ export const hostsApi = {
   delete: async (id) => {
     await api.delete(`/hosts/${id}`)
   },
+
+  activateSetup: async (id) => {
+    const response = await api.post(`/hosts/${id}/activate-setup`)
+    return response.data
+  },
 }
