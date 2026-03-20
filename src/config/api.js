@@ -56,3 +56,12 @@ export function getRouterOsWsUrlDefault() {
   const { host, pathPrefix, wsProto } = apiUrlParts()
   return `${wsProto}//${host}${pathPrefix}/ws/routeros`
 }
+
+/** WebSocket Hosts / SSH (mesmo host da API) */
+export function getHostsWsUrl(hostId) {
+  if (!hostId) {
+    throw new Error('hostId é obrigatório para o WebSocket Hosts')
+  }
+  const { host, pathPrefix, wsProto } = apiUrlParts()
+  return `${wsProto}//${host}${pathPrefix}/ws/hosts/${hostId}`
+}

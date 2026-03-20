@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   Network,
+  Server,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useTenant } from '../../hooks/useTenant'
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Devices', href: '/devices', icon: Cpu },
   { name: 'Gateways', href: '/gateways', icon: Radio },
   { name: 'Routers', href: '/routers', icon: Network },
+  { name: 'Hosts', href: '/hosts', icon: Server },
   { name: 'Usuários', href: '/users', icon: Users },
   { name: 'VPN', href: '/vpn', icon: Shield },
 ]
