@@ -28,6 +28,19 @@ const kindLabels = {
   LinuxUbuntu: 'Linux Ubuntu',
 }
 
+/**
+ * Badge "Online" no front: usa hosts.Status (PUT do monitor) e, em fallback, o estado do peer VPN
+ * (ReachableViaVpn / ping + handshake), que pode estar atualizado mesmo se o PUT do host falhou.
+ */
+function resolveHostStatusKey(h) {
+  const s = h?.status
+  if (s === 'Maintenance' || s === 'Error') return s
+  if (s === 'Online') return 'Online'
+  if (h?.vpnPeerReachableViaVpn === true) return 'Online'
+  if (h?.vpnPeerPingSuccess === true && h?.vpnPeerLastHandshake) return 'Online'
+  return 'Offline'
+}
+
 function parseMetrics(metricsJson) {
   if (!metricsJson) return null
   try { return JSON.parse(metricsJson) } catch { return null }
@@ -140,13 +153,13 @@ export default function Hosts() {
         </div>
         <div className="card p-4">
           <div className="text-2xl font-bold text-green-600">
-            {hosts?.filter((h) => h.status === 'Online').length || 0}
+            {hosts?.filter((h) => resolveHostStatusKey(h) === 'Online').length || 0}
           </div>
           <div className="text-sm text-gray-600 mt-1">Online</div>
         </div>
         <div className="card p-4">
           <div className="text-2xl font-bold text-gray-600">
-            {hosts?.filter((h) => h.status === 'Offline').length || 0}
+            {hosts?.filter((h) => resolveHostStatusKey(h) === 'Offline').length || 0}
           </div>
           <div className="text-sm text-gray-600 mt-1">Offline</div>
         </div>
@@ -197,7 +210,8 @@ export default function Hosts() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((h) => {
-            const st = statusLabels[h.status] || statusLabels.Offline
+            const statusKey = resolveHostStatusKey(h)
+            const st = statusLabels[statusKey] || statusLabels.Offline
             const prov = provisioningLabels[h.provisioningStatus]
             const metrics = parseMetrics(h.metricsJson)
 
