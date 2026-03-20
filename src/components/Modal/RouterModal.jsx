@@ -157,7 +157,7 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
     }
     
     // Gateway é opcional - se fornecido, validar formato
-    // Se vazio, RouterOS usará a interface WireGuard como gateway
+    // Se vazio, RouterOS usará a interface VPN como gateway
     
     // Validar formato CIDR para destino
     if (routeForm.destination.trim() && !/^[\d.]+(\/\d+)?$/.test(routeForm.destination.trim())) {
@@ -521,7 +521,7 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
               )}
             </div>
             <p className="text-xs text-gray-600 mb-4">
-              Redes para as quais o tráfego da VPN será encaminhado por este router. Quando alguém na VPN acessa um destino diferente, o sistema (iptables/WireGuard) encaminha o pacote para o tunnel correto.
+              Redes para as quais o tráfego da VPN será encaminhado por este router. Quando alguém na VPN acessa um destino diferente, o sistema (roteamento/iptables) encaminha o pacote para o túnel correto.
             </p>
 
             {editingDestNetwork !== null && (
@@ -725,7 +725,7 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
                             <p className="mt-1 text-xs text-red-600">{routeErrors.gateway}</p>
                           )}
                           <p className="mt-1 text-xs text-gray-500">
-                            Se vazio, RouterOS usará a interface WireGuard como gateway automaticamente
+                            Se vazio, RouterOS usará a interface VPN como gateway automaticamente
                           </p>
                         </div>
                       </div>

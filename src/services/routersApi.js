@@ -39,7 +39,7 @@ export const routersApi = {
 
   // Download da configuração VPN
   downloadVpnConfig: async (routerId) => {
-    const response = await api.get(`/routers/${routerId}/wireguard/config/download`, {
+    const response = await api.get(`/routers/${routerId}/vpn/config/download`, {
       responseType: 'blob',
     })
     
@@ -65,8 +65,8 @@ export const routersApi = {
     window.URL.revokeObjectURL(url)
   },
 
-  regenerateWireGuardPeerKeys: async (peerId) => {
-    const response = await api.post(`/wireguard/peers/${peerId}/regenerate-keys`)
+  regenerateVpnPeerKeys: async (peerId) => {
+    const response = await api.post(`/vpn/peers/${peerId}/regenerate-keys`)
     return response.data
   },
 }

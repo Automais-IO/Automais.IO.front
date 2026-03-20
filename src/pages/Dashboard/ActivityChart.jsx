@@ -32,8 +32,8 @@ export default function ActivityChart() {
         <ul className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
           {online.map((r) => {
             const ip = r.vpnTunnelIp || '—'
-            const rx = formatBytes(r.wireGuardBytesReceived)
-            const tx = formatBytes(r.wireGuardBytesSent)
+            const rx = formatBytes(r.vpnBytesReceived)
+            const tx = formatBytes(r.vpnBytesSent)
             const lat =
               r.latency != null && r.latency !== ''
                 ? `${r.latency} ms`

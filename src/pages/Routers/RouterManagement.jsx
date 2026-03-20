@@ -108,8 +108,7 @@ export default function RouterManagement() {
         }
       }
     }
-    // Se não tiver, tentar buscar do peer WireGuard (seria necessário buscar via API)
-    // Por enquanto, retornar null e deixar o backend buscar do peer WireGuard
+    // Se não tiver, o backend pode obter o IP via peer VPN na API
     return null
   }
 
@@ -136,13 +135,13 @@ export default function RouterManagement() {
         await new Promise(r => setTimeout(r, 500))
       }
 
-      // Obter IP do router (pode ser null - o backend buscará do peer WireGuard se necessário)
+      // Obter IP do router (pode ser null - o backend buscará do peer VPN se necessário)
       const routerIp = getRouterIp(routerData)
 
       // Obter status via WebSocket (routerIp pode ser null - backend buscará se necessário)
       const status = await routerOsWebSocketService.getStatus(routerId, routerIp)
       
-      // O backend retorna router_ip na resposta quando busca do peer WireGuard
+      // O backend retorna router_ip na resposta quando obtém do peer VPN
       const finalRouterIp = status.router_ip || routerIp
       
       setConnectionStatus({

@@ -97,18 +97,18 @@ export default function Routers() {
 
   const openRenewPeerConfirm = (e, router) => {
     e.stopPropagation()
-    if (!router.wireGuardPeerId) return
+    if (!router.vpnPeerId) return
     setRenewConfirmRouter(router)
   }
 
   const closeRenewPeerConfirm = () => setRenewConfirmRouter(null)
 
   const handleConfirmRegeneratePeerKeys = async () => {
-    if (!renewConfirmRouter?.wireGuardPeerId) return
+    if (!renewConfirmRouter?.vpnPeerId) return
     const router = renewConfirmRouter
     setRenewConfirmRouter(null)
     try {
-      await routersApi.regenerateWireGuardPeerKeys(router.wireGuardPeerId)
+      await routersApi.regenerateVpnPeerKeys(router.vpnPeerId)
       await refetch()
       setRenewResult({
         success: true,
@@ -156,7 +156,7 @@ export default function Routers() {
             <p className="mt-1 text-sm text-gray-600">
               Gerencie seus routers MikroTik —{' '}
               <span className="text-gray-500">
-                <strong className="text-gray-700">VPN</strong> = túnel WireGuard;{' '}
+                <strong className="text-gray-700">VPN</strong> = túnel criptografado;{' '}
                 <strong className="text-gray-700">API</strong> = RouterOS porta 8728
               </span>
             </p>
@@ -268,7 +268,7 @@ export default function Routers() {
                         'badge text-xs shrink-0',
                         statusLabels[router.status]?.color || 'badge-gray'
                       )}
-                      title="Status do túnel WireGuard (servidor VPN)"
+                      title="Status do túnel VPN (servidor)"
                     >
                       {statusLabels[router.status]?.label || router.status}
                     </span>
@@ -296,7 +296,7 @@ export default function Routers() {
                       </p>
                     )}
                   <div className="flex justify-end gap-2 mt-1">
-                    {router.vpnNetworkId && router.wireGuardPeerId && (
+                    {router.vpnNetworkId && router.vpnPeerId && (
                       <button
                         type="button"
                         onClick={(e) => openRenewPeerConfirm(e, router)}
@@ -356,12 +356,12 @@ export default function Routers() {
                       IP na VPN: <span className="text-primary-600 font-medium">{router.vpnTunnelIp}</span>
                     </p>
                   )}
-                  {router.vpnNetworkId && !router.wireGuardPeerId && (
+                  {router.vpnNetworkId && !router.vpnPeerId && (
                     <div className="mt-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 inline-block">
-                      VPN: sem peer WireGuard
+                      VPN: sem peer configurado
                     </div>
                   )}
-                  {router.vpnNetworkId && router.wireGuardPeerId && !router.wireGuardPeerKeysConfigured && (
+                  {router.vpnNetworkId && router.vpnPeerId && !router.vpnPeerKeysConfigured && (
                     <div className="mt-2 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded px-2 py-0.5 inline-block">
                       Chaves peer incompletas
                     </div>
@@ -470,7 +470,7 @@ export default function Routers() {
       <Modal
         isOpen={!!renewConfirmRouter}
         onClose={closeRenewPeerConfirm}
-        title="Renovar chaves WireGuard do router?"
+        title="Renovar chaves VPN do router?"
       >
         {renewConfirmRouter && (
           <div className="space-y-4">

@@ -42,9 +42,9 @@ export const routerStaticRoutesApi = {
     return response.data
   },
 
-  // Listar interfaces WireGuard do RouterOS
-  getWireGuardInterfaces: async (routerId) => {
-    const response = await api.get(`/routers/${routerId}/routes/wireguard-interfaces`)
+  // Listar interfaces VPN (túnel) no RouterOS
+  getVpnTunnelInterfaces: async (routerId) => {
+    const response = await api.get(`/routers/${routerId}/routes/vpn-tunnel-interfaces`)
     return response.data
   },
 }

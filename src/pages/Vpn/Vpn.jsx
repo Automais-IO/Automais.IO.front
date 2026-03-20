@@ -368,7 +368,7 @@ export default function Vpn() {
                   </div>
                 )}
                 <div>
-                  <span className="text-gray-600">Porta UDP (WireGuard):</span>{' '}
+                  <span className="text-gray-600">Porta UDP (VPN):</span>{' '}
                   <span className="font-mono font-medium text-primary-700">
                     {network.listenPort != null && network.listenPort > 0 ? network.listenPort : 51820}
                   </span>
@@ -472,14 +472,14 @@ export default function Vpn() {
               required
             />
             <p className="mt-1 text-xs text-gray-500">
-              Endpoint do servidor WireGuard (ex: automais.io). Este valor será usado nos arquivos .conf gerados.
+              Endpoint do servidor VPN (ex: automais.io). Este valor será usado nos arquivos .conf gerados.
             </p>
           </div>
 
           {selectedNetwork ? (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Porta UDP (WireGuard) <span className="text-red-500">*</span>
+                Porta UDP (túnel VPN) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -562,7 +562,7 @@ export default function Vpn() {
       <Modal
         isOpen={!!renewConfirmTarget}
         onClose={closeRenewConfirm}
-        title="Renovar chaves do servidor WireGuard?"
+        title="Renovar chaves do servidor VPN?"
       >
         {renewConfirmTarget && (
           <div className="space-y-4">

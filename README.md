@@ -68,7 +68,7 @@ src/
 │   ├── Devices/           # Gestão de devices
 │   ├── Gateways/          # Gestão de gateways
 │   ├── Users/             # Gestão de usuários
-│   └── WireGuard/         # Gestão de VPN
+│   └── Vpn/               # Gestão de VPN
 ├── App.jsx                # Componente raiz
 ├── main.jsx              # Entry point
 └── index.css             # Estilos globais
@@ -111,7 +111,7 @@ src/
 - Status ativo/inativo
 - Convite de novos usuários
 
-### ✅ WireGuard
+### ✅ VPN
 - Gestão de peers VPN
 - Peers de usuários e devices
 - Redes permitidas
