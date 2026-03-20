@@ -12,16 +12,23 @@ class HostsWebSocketService {
     this.pendingRequests = new Map()
     this.connectPromise = null
     this.connectionTimeout = 15000
+    this._lastServerError = null
+    this._lastCloseReason = null
   }
 
   /** Garante socket aberto; lança erro claro se não houver conexão. */
   _assertOpenSocket() {
     const ws = this.connection
     if (ws && ws.readyState === WebSocket.OPEN) return ws
-    throw new Error(
-      'WebSocket do console Hosts não está aberto. Confira o serviço na porta 8766, ' +
+
+    const parts = ['WebSocket do console Hosts não está aberto.']
+    if (this._lastServerError) parts.push(`Servidor: ${this._lastServerError}`)
+    if (this._lastCloseReason) parts.push(`Fechamento: ${this._lastCloseReason}`)
+    parts.push(
+      'Confira o serviço Automais.IO.hosts na porta 8766, ' +
         'o Nginx (location /api/ws/hosts/) e se a aba ainda está nesta página.'
     )
+    throw new Error(parts.join(' '))
   }
 
   async connect(hostId, forceReconnect = false) {
@@ -43,6 +50,9 @@ class HostsWebSocketService {
       } catch (_) {}
       this.connection = null
     }
+
+    this._lastServerError = null
+    this._lastCloseReason = null
 
     const wsUrl = getHostsWsUrl(hostId)
     this.connectPromise = new Promise((resolve, reject) => {
@@ -86,19 +96,30 @@ class HostsWebSocketService {
 
         ws.onerror = () => {
           if (ws !== this.connection) return
+          const detail = this._lastServerError
+            ? ` Servidor: ${this._lastServerError}`
+            : ''
           finish(
             reject,
             new Error(
-              'Falha na conexão WebSocket do console Hosts (wss → /api/ws/hosts/). ' +
-                'Verifique Nginx, serviço Automais.IO.hosts na 8766 e certificado.'
+              'Falha na conexão WebSocket do console Hosts (wss → /api/ws/hosts/).' +
+                detail +
+                ' Verifique Nginx, serviço Automais.IO.hosts na 8766 e certificado.'
             )
           )
         }
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
+          const code = event.code
+          const reason = event.reason || ''
+          if (reason) this._lastCloseReason = `${code} – ${reason}`
+          else if (code !== 1000) this._lastCloseReason = `código ${code}`
+
+          const closeDetail = this._lastServerError || reason || `código ${code}`
+
           this.pendingRequests.forEach(({ reject: r, timeoutId }) => {
             clearTimeout(timeoutId)
-            r(new Error('WebSocket desconectado'))
+            r(new Error(`WebSocket desconectado (${closeDetail})`))
           })
           this.pendingRequests.clear()
 
@@ -108,7 +129,10 @@ class HostsWebSocketService {
             finish(
               reject,
               new Error(
-                'WebSocket fechou antes de estabilizar. Serviço Hosts (8766) ou proxy da API pode estar indisponível.'
+                'WebSocket fechou antes de estabilizar' +
+                  (this._lastServerError
+                    ? `: ${this._lastServerError}`
+                    : `. Serviço Hosts (8766) ou proxy da API pode estar indisponível (${closeDetail}).`)
               )
             )
           }
@@ -124,7 +148,13 @@ class HostsWebSocketService {
 
   handleMessage(data) {
     const reqId = data.id
-    if (reqId == null) return
+    if (reqId == null) {
+      if (data.error || data.success === false) {
+        this._lastServerError = data.error || 'Erro do servidor (sem detalhes)'
+        console.warn('[Hosts WS] Erro do servidor (sem request ID):', data.error)
+      }
+      return
+    }
     const key = typeof reqId === 'number' ? reqId : String(reqId)
     for (const k of this.pendingRequests.keys()) {
       if (k === reqId || String(k) === key) {
@@ -190,7 +220,6 @@ class HostsWebSocketService {
   async executeCommand(hostId, command) {
     const hid = String(hostId)
     await this.connect(hid)
-    this._assertOpenSocket()
     return this.send(
       {
         action: 'execute_command',
