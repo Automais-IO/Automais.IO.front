@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Modal from './Modal'
 import { useCreateRouter, useUpdateRouter } from '../../hooks/useRouters'
 import { vpnNetworksApi } from '../../services/vpnNetworksApi'
-import { routerStaticRoutesApi } from '../../services/routerStaticRoutesApi'
-import { routerDestinationNetworksApi } from '../../services/routerDestinationNetworksApi'
+import { staticNetworksApi } from '../../services/staticNetworksApi'
+import { allowedNetworksApi } from '../../services/allowedNetworksApi'
 import { getTenantId } from '../../config/tenant'
 import { Plus, Edit, Trash2, X, Check, ChevronDown, ChevronUp } from 'lucide-react'
 export default function RouterModal({ isOpen, onClose, router = null }) {
@@ -49,7 +49,7 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
     
     try {
       setLoadingRoutes(true)
-      const routesData = await routerStaticRoutesApi.getByRouter(router.id)
+      const routesData = await staticNetworksApi.getByRouter(router.id)
       setRoutes(routesData || [])
     } catch (error) {
       console.error('Erro ao carregar rotas:', error)
@@ -63,7 +63,7 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
     if (!router?.id) return
     try {
       setLoadingDestinationNetworks(true)
-      const data = await routerDestinationNetworksApi.getByRouter(router.id)
+      const data = await allowedNetworksApi.getByRouter(router.id)
       setDestinationNetworks(data || [])
     } catch (error) {
       console.error('Erro ao carregar redes destino:', error)
@@ -231,16 +231,16 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
       let savedRoute
       if (editingRoute.id) {
         // Atualizar rota existente
-        savedRoute = await routerStaticRoutesApi.update(router.id, editingRoute.id, routeData)
+        savedRoute = await staticNetworksApi.update(router.id, editingRoute.id, routeData)
       } else {
         // Criar nova rota (já vem com status PendingAdd)
-        savedRoute = await routerStaticRoutesApi.create(router.id, routeData)
+        savedRoute = await staticNetworksApi.create(router.id, routeData)
       }
 
       // Aplicar rotas imediatamente após salvar
       // Isso vai chamar a API RouterOS para adicionar a rota
       try {
-        const applyResult = await routerStaticRoutesApi.applyRoutes(router.id)
+        const applyResult = await staticNetworksApi.applyPending(router.id)
         console.log('Rotas aplicadas:', applyResult)
       } catch (applyError) {
         console.error('Erro ao aplicar rotas:', applyError)
@@ -266,14 +266,14 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
 
     try {
       // Marcar rota como PendingRemove (ao invés de deletar diretamente)
-      await routerStaticRoutesApi.batchUpdateStatus(router.id, {
-        routesToAdd: [],
-        routesToRemove: [routeId]
+      await staticNetworksApi.batchUpdateStatus(router.id, {
+        staticNetworkIdsToAdd: [],
+        staticNetworkIdsToRemove: [routeId]
       })
 
       // Aplicar remoção imediatamente (chama API RouterOS para remover)
       try {
-        const applyResult = await routerStaticRoutesApi.applyRoutes(router.id)
+        const applyResult = await staticNetworksApi.applyPending(router.id)
         console.log('Rotas aplicadas (remoção):', applyResult)
       } catch (applyError) {
         console.error('Erro ao aplicar remoção de rota:', applyError)
@@ -384,12 +384,12 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
     if (!validateDestNetwork() || !router?.id) return
     try {
       if (editingDestNetwork?.id) {
-        await routerDestinationNetworksApi.update(router.id, editingDestNetwork.id, {
+        await allowedNetworksApi.update(router.id, editingDestNetwork.id, {
           networkCidr: destNetworkForm.networkCidr.trim(),
           description: destNetworkForm.description?.trim() || undefined,
         })
       } else {
-        await routerDestinationNetworksApi.create(router.id, {
+        await allowedNetworksApi.create(router.id, {
           networkCidr: destNetworkForm.networkCidr.trim(),
           description: destNetworkForm.description?.trim() || undefined,
         })
@@ -405,7 +405,7 @@ export default function RouterModal({ isOpen, onClose, router = null }) {
   const handleDeleteDestNetwork = async (id) => {
     if (!router?.id || !window.confirm('Remover esta rede destino?')) return
     try {
-      await routerDestinationNetworksApi.delete(router.id, id)
+      await allowedNetworksApi.delete(router.id, id)
       await loadDestinationNetworks()
     } catch (error) {
       console.error('Erro ao remover rede destino:', error)

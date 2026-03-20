@@ -56,31 +56,31 @@ export const useDeleteUser = () => {
   })
 }
 
-export const useAvailableRoutes = () => {
+export const useAllowedNetworksCatalog = () => {
   const tenantId = getTenantId()
 
   return useQuery({
-    queryKey: ['availableRoutes', tenantId],
-    queryFn: () => usersApi.getAvailableRoutes(tenantId),
+    queryKey: ['allowedNetworksCatalog', tenantId],
+    queryFn: () => usersApi.getAllowedNetworksCatalog(tenantId),
     enabled: !!tenantId,
   })
 }
 
-export const useUserRoutes = (userId) => {
+export const useUserAllowedNetworks = (userId) => {
   return useQuery({
-    queryKey: ['userRoutes', userId],
-    queryFn: () => usersApi.getUserRoutes(userId),
+    queryKey: ['userAllowedNetworks', userId],
+    queryFn: () => usersApi.getUserAllowedNetworks(userId),
     enabled: !!userId,
   })
 }
 
-export const useUpdateUserRoutes = () => {
+export const useUpdateUserAllowedNetworks = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, data }) => usersApi.updateUserRoutes(id, data),
+    mutationFn: ({ id, data }) => usersApi.updateUserAllowedNetworks(id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['userRoutes', variables.id] })
+      queryClient.invalidateQueries({ queryKey: ['userAllowedNetworks', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['user', variables.id] })
     },
   })
@@ -97,4 +97,3 @@ export const useResetPassword = () => {
     },
   })
 }
-

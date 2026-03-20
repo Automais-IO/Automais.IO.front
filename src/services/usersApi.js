@@ -36,21 +36,21 @@ export const usersApi = {
     return response.data
   },
 
-  // Obter rotas disponíveis do tenant
-  getAvailableRoutes: async (tenantId) => {
-    const response = await api.get(`/tenants/${tenantId}/routes`)
+  /** Catálogo de redes permitidas (por router/peer) no tenant — para atribuição VPN ao usuário. */
+  getAllowedNetworksCatalog: async (tenantId) => {
+    const response = await api.get(`/tenants/${tenantId}/allowed-networks-for-users`)
     return response.data
   },
 
-  // Obter rotas permitidas do usuário
-  getUserRoutes: async (id) => {
-    const response = await api.get(`/users/${id}/routes`)
+  /** Redes permitidas já atribuídas ao usuário. */
+  getUserAllowedNetworks: async (id) => {
+    const response = await api.get(`/users/${id}/allowed-networks`)
     return response.data
   },
 
-  // Atualizar rotas permitidas do usuário
-  updateUserRoutes: async (id, data) => {
-    await api.put(`/users/${id}/routes`, data)
+  /** Substitui a lista de redes permitidas do usuário. */
+  updateUserAllowedNetworks: async (id, data) => {
+    await api.put(`/users/${id}/allowed-networks`, data)
   },
 
   // Resetar senha do usuário
@@ -59,4 +59,3 @@ export const usersApi = {
     return response.data
   },
 }
-

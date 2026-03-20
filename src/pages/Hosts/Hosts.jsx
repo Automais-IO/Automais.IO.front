@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Server, Plus, Search, Trash2, Edit, Terminal, AlertCircle,
-  Plug, Cpu, HardDrive, Database,
+  Plug, Cpu, HardDrive, Database, Activity,
 } from 'lucide-react'
 import { useHosts, useDeleteHost } from '../../hooks/useHosts'
 import HostModal from '../../components/Modal/HostModal'
@@ -229,6 +229,43 @@ export default function Hosts() {
                         IP na VPN:{' '}
                         <span className="text-primary-600 font-medium">{h.vpnIp}</span>
                       </p>
+                    )}
+                    {(typeof h.vpnPeerPingAvgTimeMs === 'number' ||
+                      h.vpnPeerLastHandshake ||
+                      typeof h.vpnPeerPingSuccess === 'boolean') && (
+                      <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                        {typeof h.vpnPeerPingAvgTimeMs === 'number' && (
+                          <p className="flex items-center gap-1">
+                            <Activity className="w-3.5 h-3.5 shrink-0 text-primary-500" />
+                            <span>
+                              Latência (ICMP): {Math.round(h.vpnPeerPingAvgTimeMs)} ms
+                              {typeof h.vpnPeerPingPacketLoss === 'number' && (
+                                <span className="text-gray-400">
+                                  {' '}
+                                  · perda {Math.round(h.vpnPeerPingPacketLoss)}%
+                                </span>
+                              )}
+                            </span>
+                          </p>
+                        )}
+                        {typeof h.vpnPeerPingSuccess === 'boolean' && (
+                          <p className="text-gray-400">
+                            Ping VPN: {h.vpnPeerPingSuccess ? 'OK' : 'falhou'}
+                          </p>
+                        )}
+                        {h.vpnPeerLastHandshake && (
+                          <p className="text-gray-400">
+                            Handshake:{' '}
+                            {new Date(h.vpnPeerLastHandshake).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </p>
+                        )}
+                      </div>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
                       {kindLabels[h.hostKind] || h.hostKind} · SSH :{h.sshPort}

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import Modal from './Modal'
 import MessageModal from './MessageModal'
 import ConfirmModal from './ConfirmModal'
-import { 
-  useCreateUser, 
-  useUpdateUser, 
-  useAvailableRoutes, 
-  useUserRoutes, 
-  useUpdateUserRoutes,
-  useResetPassword
+import {
+  useCreateUser,
+  useUpdateUser,
+  useAllowedNetworksCatalog,
+  useUserAllowedNetworks,
+  useUpdateUserAllowedNetworks,
+  useResetPassword,
 } from '../../hooks/useUsers'
 import { Check, X, KeyRound, MailWarning } from 'lucide-react'
 
@@ -23,10 +23,10 @@ export default function UserModal({ isOpen, onClose, user = null }) {
   const isEditing = !!user
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
-  const updateUserRoutes = useUpdateUserRoutes()
+  const updateUserAllowedNetworks = useUpdateUserAllowedNetworks()
   const resetPassword = useResetPassword()
-  const { data: availableRoutes = [] } = useAvailableRoutes()
-  const { data: userRoutes = [] } = useUserRoutes(user?.id)
+  const { data: networkCatalog = [] } = useAllowedNetworksCatalog()
+  const { data: userAssignments = [] } = useUserAllowedNetworks(user?.id)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,9 +36,9 @@ export default function UserModal({ isOpen, onClose, user = null }) {
     enabled: true,
   })
 
-  const [selectedRoutes, setSelectedRoutes] = useState(new Set())
+  const [selectedNetworkIds, setSelectedNetworkIds] = useState(new Set())
   const [errors, setErrors] = useState({})
-  const [activeTab, setActiveTab] = useState('basic') // 'basic' ou 'routes'
+  const [activeTab, setActiveTab] = useState('basic') // 'basic' | 'networks'
   const [messageModal, setMessageModal] = useState({ isOpen: false, type: 'info', message: '' })
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: null })
 
@@ -68,14 +68,13 @@ export default function UserModal({ isOpen, onClose, user = null }) {
     }
   }, [isOpen, user])
 
-  // Carregar rotas selecionadas quando abrir modal de edição
   useEffect(() => {
-    if (isEditing && userRoutes.length > 0) {
-      setSelectedRoutes(new Set(userRoutes.map(r => r.routerAllowedNetworkId)))
+    if (isEditing && userAssignments.length > 0) {
+      setSelectedNetworkIds(new Set(userAssignments.map((r) => r.allowedNetworkId)))
     } else {
-      setSelectedRoutes(new Set())
+      setSelectedNetworkIds(new Set())
     }
-  }, [isEditing, userRoutes])
+  }, [isEditing, userAssignments])
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -86,23 +85,20 @@ export default function UserModal({ isOpen, onClose, user = null }) {
     }
   }
 
-  const handleRouteToggle = (routeId) => {
-    setSelectedRoutes((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(routeId)) {
-        newSet.delete(routeId)
-      } else {
-        newSet.add(routeId)
-      }
-      return newSet
+  const toggleAllowedNetwork = (allowedNetworkId) => {
+    setSelectedNetworkIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(allowedNetworkId)) next.delete(allowedNetworkId)
+      else next.add(allowedNetworkId)
+      return next
     })
   }
 
-  const handleSelectAll = () => {
-    if (selectedRoutes.size === availableRoutes.length) {
-      setSelectedRoutes(new Set())
+  const handleSelectAllNetworks = () => {
+    if (selectedNetworkIds.size === networkCatalog.length) {
+      setSelectedNetworkIds(new Set())
     } else {
-      setSelectedRoutes(new Set(availableRoutes.map(r => r.routerAllowedNetworkId)))
+      setSelectedNetworkIds(new Set(networkCatalog.map((r) => r.allowedNetworkId)))
     }
   }
 
@@ -138,12 +134,11 @@ export default function UserModal({ isOpen, onClose, user = null }) {
           },
         })
         
-        // Atualizar rotas permitidas
-        await updateUserRoutes.mutateAsync({
+        await updateUserAllowedNetworks.mutateAsync({
           id: user.id,
           data: {
-            routerAllowedNetworkIds: Array.from(selectedRoutes)
-          }
+            allowedNetworkIds: Array.from(selectedNetworkIds),
+          },
         })
       } else {
         const created = await createUser.mutateAsync({
@@ -229,15 +224,11 @@ export default function UserModal({ isOpen, onClose, user = null }) {
     })
   }
 
-  // Agrupar rotas por router
-  const routesByRouter = availableRoutes.reduce((acc, route) => {
-    if (!acc[route.routerId]) {
-      acc[route.routerId] = {
-        routerName: route.routerName,
-        routes: []
-      }
+  const networksByRouter = networkCatalog.reduce((acc, row) => {
+    if (!acc[row.routerId]) {
+      acc[row.routerId] = { routerName: row.routerName, items: [] }
     }
-    acc[route.routerId].routes.push(route)
+    acc[row.routerId].items.push(row)
     return acc
   }, {})
 
@@ -264,14 +255,14 @@ export default function UserModal({ isOpen, onClose, user = null }) {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('routes')}
+            onClick={() => setActiveTab('networks')}
             className={`px-4 py-2 font-medium text-sm ${
-              activeTab === 'routes'
+              activeTab === 'networks'
                 ? 'text-primary-600 border-b-2 border-primary-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Rotas Permitidas ({selectedRoutes.size})
+            Redes permitidas ({selectedNetworkIds.size})
           </button>
         </div>
       )}
@@ -390,7 +381,7 @@ export default function UserModal({ isOpen, onClose, user = null }) {
                 </span>
               </label>
               <p className="mt-1 text-xs text-gray-500">
-                Permite que o usuário se conecte à VPN e acesse rotas configuradas
+                Permite que o usuário se conecte à VPN e acesse as redes permitidas configuradas
               </p>
               {isEditing && (
                 <p className="mt-1 text-xs text-gray-600">
@@ -419,57 +410,59 @@ export default function UserModal({ isOpen, onClose, user = null }) {
           </>
         )}
 
-        {/* Seção de Rotas (apenas ao editar e quando a aba 'routes' está ativa) */}
-        {isEditing && activeTab === 'routes' && (
+        {isEditing && activeTab === 'networks' && (
           <div className="space-y-4 border-t border-gray-200 pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Rotas Permitidas</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Redes permitidas na VPN</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Selecione quais rotas este usuário pode acessar quando conectado à VPN
+                  Selecione quais redes este usuário pode alcançar quando conectado à VPN
                 </p>
               </div>
               <button
                 type="button"
-                onClick={handleSelectAll}
+                onClick={handleSelectAllNetworks}
                 className="btn btn-secondary text-sm"
               >
-                {selectedRoutes.size === availableRoutes.length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                {selectedNetworkIds.size === networkCatalog.length
+                  ? 'Desmarcar todas'
+                  : 'Selecionar todas'}
               </button>
             </div>
 
-            {availableRoutes.length === 0 ? (
+            {networkCatalog.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                <p>Nenhuma rota disponível. Configure rotas nos routers primeiro.</p>
+                <p>Nenhuma rede disponível. Configure redes permitidas nos routers primeiro.</p>
               </div>
             ) : (
               <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                {Object.entries(routesByRouter).map(([routerId, { routerName, routes }]) => (
+                {Object.entries(networksByRouter).map(([routerId, { routerName, items }]) => (
                   <div key={routerId} className="border-b border-gray-200 last:border-b-0">
                     <div className="bg-gray-50 px-4 py-2 font-medium text-sm text-gray-700 sticky top-0">
                       {routerName}
                     </div>
                     <div className="divide-y divide-gray-100">
-                      {routes.map((route) => {
-                        const isSelected = selectedRoutes.has(route.routerAllowedNetworkId)
+                      {items.map((row) => {
+                        const id = row.allowedNetworkId
+                        const isSelected = selectedNetworkIds.has(id)
                         return (
                           <label
-                            key={route.routerAllowedNetworkId}
+                            key={id}
                             className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
                           >
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => handleRouteToggle(route.routerAllowedNetworkId)}
+                              onChange={() => toggleAllowedNetwork(id)}
                               className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
                             />
                             <div className="flex-1">
                               <div className="font-medium text-sm text-gray-900">
-                                {route.networkCidr}
+                                {row.networkCidr}
                               </div>
-                              {route.description && (
+                              {row.description && (
                                 <div className="text-xs text-gray-500 mt-0.5">
-                                  {route.description}
+                                  {row.description}
                                 </div>
                               )}
                             </div>
