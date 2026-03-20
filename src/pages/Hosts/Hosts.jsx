@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Server, Plus, Search, Trash2, Edit, Terminal, AlertCircle,
-  Plug, Cpu, HardDrive, Database, Activity,
+  Plug, Cpu, HardDrive, Database, Activity, ShieldAlert,
 } from 'lucide-react'
 import { useHosts, useDeleteHost } from '../../hooks/useHosts'
 import HostModal from '../../components/Modal/HostModal'
@@ -57,6 +57,7 @@ export default function Hosts() {
 
   const [postCreateHost, setPostCreateHost] = useState(null)
   const [connectHost, setConnectHost] = useState(null)
+  const [confirmReconnect, setConfirmReconnect] = useState(null)
 
   const filtered = (hosts || []).filter(
     (h) =>
@@ -291,19 +292,21 @@ export default function Hosts() {
 
                     {/* Actions */}
                     <div className="flex justify-end gap-2 mt-2">
-                      {h.provisioningStatus !== 'Ready' && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (h.provisioningStatus === 'Ready' || h.provisioningStatus === 'Installing') {
+                            setConfirmReconnect(h)
+                          } else {
                             setConnectHost(h)
-                          }}
-                          className="p-2 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Conectar-se"
-                        >
-                          <Plug className="w-4 h-4 text-green-600" />
-                        </button>
-                      )}
+                          }
+                        }}
+                        className="p-2 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Conectar-se"
+                      >
+                        <Plug className="w-4 h-4 text-green-600" />
+                      </button>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -430,6 +433,44 @@ export default function Hosts() {
             <button type="button" className="btn btn-primary" onClick={handleConnectNow}>
               <Plug className="w-4 h-4" />
               Conectar agora
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal confirmar reconexão (host já provisionado) */}
+      <Modal
+        isOpen={!!confirmReconnect}
+        onClose={() => setConfirmReconnect(null)}
+        title="Reconectar host"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-amber-900 font-medium">
+                O host <strong>{confirmReconnect?.name}</strong> já está {confirmReconnect?.provisioningStatus === 'Ready' ? 'conectado e provisionado' : 'em instalação'}.
+              </p>
+              <p className="text-sm text-amber-800 mt-2">
+                Ao continuar, <strong>novas chaves VPN e SSH serão geradas</strong>. O acesso atual ao host será perdido até que o novo script seja executado no servidor.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
+            <button type="button" className="btn btn-ghost" onClick={() => setConfirmReconnect(null)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500"
+              onClick={() => {
+                const host = confirmReconnect
+                setConfirmReconnect(null)
+                setConnectHost(host)
+              }}
+            >
+              <Plug className="w-4 h-4" />
+              Reconectar mesmo assim
             </button>
           </div>
         </div>
