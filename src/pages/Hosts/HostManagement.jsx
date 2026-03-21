@@ -107,9 +107,12 @@ export default function HostManagement() {
 
       <div className="card bg-gray-900 text-gray-100 p-4 min-h-[320px] flex flex-col">
         <p className="text-xs text-gray-500 mb-2">
-          Comandos são executados via SSH no IP da VPN. O serviço{' '}
-          <code className="text-gray-400">Automais.IO.hosts</code> precisa estar rodando na
-          API (porta 8766).
+          Comandos via SSH no IP da VPN. A API só abre o WebSocket depois de conectar ao
+          serviço <code className="text-gray-400">Automais.IO.hosts</code> em{' '}
+          <code className="text-gray-400">127.0.0.1:8766</code> (mesmo servidor). Se o
+          handshake falhar, verifique o processo Python, Nginx{' '}
+          <code className="text-gray-400">/api/ws/hosts/</code> e a resposta HTTP (ex.: 503
+          no DevTools).
         </p>
         {wsError && (
           <p className="text-amber-400 text-sm mb-2">
