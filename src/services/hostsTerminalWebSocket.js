@@ -22,24 +22,36 @@ export class HostsTerminalSession {
   constructor() {
     this._ws = null
     this._hostId = null
+    this._clientKey = null
     this._connectPromise = null
     this._onOutput = null
     this._onError = null
     this._onClose = null
+    this._onRemoteSessionEnded = null
+    this._onClientKey = null
     this._connectionTimeout = 20000
   }
 
   /**
    * @param {string} hostId
    * @param {{ cols: number, rows: number }} dims
-   * @param {{ onOutput: (u8: Uint8Array) => void, onError?: (msg: string) => void, onClose?: () => void }} callbacks
+   * @param {{
+   *   onOutput: (u8: Uint8Array) => void,
+   *   onError?: (msg: string) => void,
+   *   onClose?: () => void,
+   *   onRemoteSessionEnded?: () => void,
+   * }} callbacks
+   * @param {{ resumeKey?: string, onClientKey?: (key: string) => void }} [options]
    */
-  async connect(hostId, dims, callbacks) {
+  async connect(hostId, dims, callbacks, options = {}) {
     this.close()
     this._hostId = String(hostId)
     this._onOutput = callbacks.onOutput
     this._onError = callbacks.onError
     this._onClose = callbacks.onClose
+    this._onRemoteSessionEnded = callbacks.onRemoteSessionEnded ?? null
+    this._onClientKey = options.onClientKey ?? null
+    const resumeKey = options.resumeKey?.trim() || null
 
     const wsUrl = getHostsWsUrl(this._hostId)
     const { cols, rows } = dims
@@ -68,14 +80,14 @@ export class HostsTerminalSession {
         ws.onopen = () => {
           if (ws !== this._ws) return
           try {
-            ws.send(
-              JSON.stringify({
-                action: 'terminal_start',
-                host_id: this._hostId,
-                cols: Math.max(40, Math.min(cols, 500)),
-                rows: Math.max(8, Math.min(rows, 200)),
-              })
-            )
+            const start = {
+              action: 'terminal_start',
+              host_id: this._hostId,
+              cols: Math.max(40, Math.min(cols, 500)),
+              rows: Math.max(8, Math.min(rows, 200)),
+            }
+            if (resumeKey) start.resume_key = resumeKey
+            ws.send(JSON.stringify(start))
             finish(resolve, undefined)
           } catch (e) {
             finish(reject, e)
@@ -92,7 +104,14 @@ export class HostsTerminalSession {
               this._onOutput?.(u8)
             } else if (data.type === 'error') {
               this._onError?.(data.message || 'Erro no terminal')
+            } else if (data.type === 'client_key' && data.client_key) {
+              this._clientKey = String(data.client_key)
+              this._onClientKey?.(this._clientKey)
+            } else if (data.type === 'resumed' && data.client_key) {
+              this._clientKey = String(data.client_key)
+              this._onClientKey?.(this._clientKey)
             } else if (data.type === 'session_end') {
+              this._onRemoteSessionEnded?.()
               this._onClose?.()
             }
           } catch (e) {
@@ -152,15 +171,38 @@ export class HostsTerminalSession {
     this._ws.send(JSON.stringify({ action: 'terminal_intr', host_id: this._hostId }))
   }
 
+  /** Encerra o PTY no servidor (não apenas o WebSocket). */
+  sendTerminalClose() {
+    if (
+      !this._ws ||
+      this._ws.readyState !== WebSocket.OPEN ||
+      !this._clientKey ||
+      !this._hostId
+    )
+      return
+    try {
+      this._ws.send(
+        JSON.stringify({
+          action: 'terminal_close',
+          host_id: this._hostId,
+          client_key: this._clientKey,
+        })
+      )
+    } catch (_) {}
+  }
+
   close() {
     try {
       this._ws?.close()
     } catch (_) {}
     this._ws = null
     this._hostId = null
+    this._clientKey = null
     this._onOutput = null
     this._onError = null
     this._onClose = null
+    this._onRemoteSessionEnded = null
+    this._onClientKey = null
     this._connectPromise = null
   }
 

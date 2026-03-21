@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Server, Plus, Search, Trash2, Edit, Terminal, AlertCircle,
@@ -44,6 +44,69 @@ function resolveHostStatusKey(h) {
 function parseMetrics(metricsJson) {
   if (!metricsJson) return null
   try { return JSON.parse(metricsJson) } catch { return null }
+}
+
+function formatSshSessionDuration(ms) {
+  if (ms < 0 || Number.isNaN(ms)) return '—'
+  const sTotal = Math.floor(ms / 1000)
+  const d = Math.floor(sTotal / 86400)
+  const h = Math.floor((sTotal % 86400) / 3600)
+  const m = Math.floor((sTotal % 3600) / 60)
+  const s = sTotal % 60
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}min`
+  if (m > 0) return `${m}min ${s}s`
+  return `${s}s`
+}
+
+/** Atualiza a cada 1s enquanto houver sessão aberta (relógio local; início vem da API). */
+function HostInteractiveSshFooter({ host }) {
+  const open = host.sshInteractiveSessionOpen === true
+  const since = host.sshInteractiveSessionSince
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!open || !since) return undefined
+    const id = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(id)
+  }, [open, since])
+
+  const duration =
+    open && since ? formatSshSessionDuration(Date.now() - new Date(since).getTime()) : null
+
+  return (
+    <div className="pt-3 mt-3 border-t border-gray-200">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Terminal className="w-4 h-4 text-slate-500 shrink-0" aria-hidden />
+          <div className="min-w-0">
+            <div className="text-xs text-gray-600">Sessão SSH (console web)</div>
+            {host.lastSshInteractiveReportAt && (
+              <div className="text-[10px] text-gray-400 truncate">
+                Dados do serviço hosts ·{' '}
+                {new Date(host.lastSshInteractiveReportAt).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          {open && duration ? (
+            <>
+              <span className="badge badge-success text-xs">Aberta</span>
+              <div className="text-xs font-semibold text-gray-900 mt-1">há {duration}</div>
+            </>
+          ) : (
+            <span className="text-xs text-gray-500">Nenhuma</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function Hosts() {
@@ -363,6 +426,8 @@ export default function Hosts() {
                     </div>
                   </div>
                 </div>
+
+                <HostInteractiveSshFooter host={h} />
 
                 {/* Metrics */}
                 {metrics && (
