@@ -17,6 +17,55 @@ import {
   clearSshResumeKey,
 } from '../../services/hostTerminalPersistence'
 
+/**
+ * Estilo PuTTY: botão direito cola da área de transferência;
+ * soltar o botão esquerdo após selecionar copia a seleção do xterm para o clipboard.
+ */
+function attachPuttyLikeClipboard(term) {
+  const el = term.element
+  if (!el) return () => {}
+
+  let leftDownStartedInTerminal = false
+
+  const onContextMenu = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    void (async () => {
+      try {
+        const text = await navigator.clipboard.readText()
+        if (text) term.paste(text)
+      } catch {
+        /* permissão negada ou contexto sem HTTPS */
+      }
+    })()
+  }
+
+  const onMouseDown = (e) => {
+    if (e.button === 0) leftDownStartedInTerminal = true
+  }
+
+  const onMouseUp = (e) => {
+    if (e.button !== 0) return
+    const startedHere = leftDownStartedInTerminal
+    leftDownStartedInTerminal = false
+    if (!startedHere) return
+    requestAnimationFrame(() => {
+      const sel = term.getSelection()
+      if (!sel) return
+      void navigator.clipboard.writeText(sel).catch(() => {})
+    })
+  }
+
+  el.addEventListener('contextmenu', onContextMenu)
+  el.addEventListener('mousedown', onMouseDown)
+  document.addEventListener('mouseup', onMouseUp)
+  return () => {
+    el.removeEventListener('contextmenu', onContextMenu)
+    el.removeEventListener('mousedown', onMouseDown)
+    document.removeEventListener('mouseup', onMouseUp)
+  }
+}
+
 function createXTerm() {
   return new XTerm({
     cursorBlink: true,
@@ -189,6 +238,8 @@ export default function HostManagement() {
       session.sendInput(data)
     })
 
+    const detachPuttyClipboard = attachPuttyLikeClipboard(term)
+
     const ro = new ResizeObserver(() => {
       if (!termRef.current || !fitRef.current || !sessionRef.current) return
       try {
@@ -202,6 +253,11 @@ export default function HostManagement() {
 
     return () => {
       ro.disconnect()
+      try {
+        detachPuttyClipboard()
+      } catch {
+        /* ignore */
+      }
       try {
         dataDisposableRef.current?.dispose()
       } catch {
@@ -385,7 +441,8 @@ export default function HostManagement() {
       </label>
 
       <p className="text-xs text-gray-500 mb-2 shrink-0">
-        Terminal estilo PuTTY. Duas abas no mesmo host reanexam à mesma sessão no serviço hosts (a
+        Terminal estilo PuTTY: selecione com o botão esquerdo e solte para copiar; botão direito cola
+        da área de transferência. Duas abas no mesmo host reanexam à mesma sessão no serviço hosts (a
         última conexão assume o fluxo). <span className="font-medium text-gray-600">Encerrar sessão</span>{' '}
         manda encerramento explícito até o Python fechar o PTY.{' '}
         <span className="font-medium text-gray-600">Reiniciar sessão</span> encerra o shell atual lá e abre outro.
