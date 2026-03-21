@@ -57,11 +57,28 @@ export function getRouterOsWsUrlDefault() {
   return `${wsProto}//${host}${pathPrefix}/ws/routeros`
 }
 
-/** WebSocket Hosts / SSH (mesmo host da API) */
-export function getHostsWsUrl(hostId) {
+/**
+ * WebSocket Hosts / SSH (mesmo host da API).
+ * O JWT vai na query (?access_token=) porque o browser não envia Authorization no handshake WebSocket.
+ * @param {string} hostId
+ * @param {string | null | undefined} [accessToken] — se omitido, usa localStorage.token no browser
+ */
+export function getHostsWsUrl(hostId, accessToken) {
   if (!hostId) {
     throw new Error('hostId é obrigatório para o WebSocket Hosts')
   }
+  const token =
+    accessToken !== undefined && accessToken !== null
+      ? accessToken
+      : typeof window !== 'undefined'
+        ? localStorage.getItem('token')
+        : null
+  if (!token || !String(token).trim()) {
+    throw new Error(
+      'Sessão não encontrada: faça login novamente para usar o console do host.'
+    )
+  }
   const { host, pathPrefix, wsProto } = apiUrlParts()
-  return `${wsProto}//${host}${pathPrefix}/ws/hosts/${hostId}`
+  const q = new URLSearchParams({ access_token: String(token).trim() })
+  return `${wsProto}//${host}${pathPrefix}/ws/hosts/${hostId}?${q.toString()}`
 }

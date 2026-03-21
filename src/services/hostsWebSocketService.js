@@ -2,7 +2,7 @@ import { getHostsWsUrl } from '../config/api'
 
 /**
  * WebSocket para console SSH (serviço hosts.io) via proxy da API.
- * Credenciais ficam no backend; só enviamos host_id + comando.
+ * Credenciais SSH ficam no backend; o handshake WSS inclui JWT na query (access_token).
  */
 class HostsWebSocketService {
   constructor() {
