@@ -16,13 +16,16 @@ export default function HostManagement() {
   const termRef = useRef(null)
   const fitRef = useRef(null)
   const sessionRef = useRef(null)
+  /** Texto do overlay até a primeira saída do shell remoto (não só o handshake WSS). */
   const [banner, setBanner] = useState(null)
+  const awaitingFirstOutputRef = useRef(true)
   /** Incrementa para encerrar WebSocket + PTY no servidor e montar terminal novo. */
   const [sessionEpoch, setSessionEpoch] = useState(0)
 
   useEffect(() => {
     if (!hostId || isLoading || !containerRef.current) return undefined
 
+    awaitingFirstOutputRef.current = true
     const el = containerRef.current
     const term = new XTerm({
       cursorBlink: true,
@@ -61,7 +64,7 @@ export default function HostManagement() {
     const session = new HostsTerminalSession()
     sessionRef.current = session
 
-    setBanner('Conectando ao shell…')
+    setBanner('Abrindo sessão SSH e aguardando o shell remoto…')
 
     session
       .connect(
@@ -70,20 +73,24 @@ export default function HostManagement() {
         {
           onOutput: (u8) => {
             term.write(u8)
+            if (awaitingFirstOutputRef.current && u8?.length > 0) {
+              awaitingFirstOutputRef.current = false
+              setBanner(null)
+            }
           },
           onError: (msg) => {
+            awaitingFirstOutputRef.current = false
             setBanner(null)
             term.writeln(`\r\n\x1b[31m${msg}\x1b[0m`)
           },
           onClose: () => {
+            awaitingFirstOutputRef.current = false
             setBanner(null)
           },
         }
       )
-      .then(() => {
-        setBanner(null)
-      })
       .catch((e) => {
+        awaitingFirstOutputRef.current = false
         setBanner(null)
         term.writeln(`\r\n\x1b[31m${e.message}\x1b[0m\r\n`)
       })
@@ -141,7 +148,7 @@ export default function HostManagement() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="p-6 max-w-6xl mx-auto flex flex-col h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] min-h-0 overflow-hidden box-border">
       <div className="flex items-center gap-3 mb-4 shrink-0">
         <button
           type="button"
@@ -175,17 +182,20 @@ export default function HostManagement() {
         shell no Linux e abre uma conexão nova. O serviço{' '}
         <code className="text-gray-600">Automais.IO.hosts</code> mantém o SSH na VPN.
       </p>
-      {banner && (
-        <p className="text-sm text-amber-700 mb-2 shrink-0 flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          {banner}
-        </p>
-      )}
 
-      <div
-        ref={containerRef}
-        className="flex-1 min-h-[420px] rounded-lg border border-gray-700 overflow-hidden bg-slate-900 p-1"
-      />
+      <div className="relative flex-1 min-h-0 min-w-0 rounded-lg border border-gray-700 overflow-hidden bg-slate-900 p-1">
+        {banner && (
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-900/92 px-4 text-center"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <Loader2 className="h-10 w-10 shrink-0 animate-spin text-primary-500" />
+            <p className="text-sm text-gray-200 max-w-sm">{banner}</p>
+          </div>
+        )}
+        <div ref={containerRef} className="h-full w-full min-h-0" />
+      </div>
     </div>
   )
 }
