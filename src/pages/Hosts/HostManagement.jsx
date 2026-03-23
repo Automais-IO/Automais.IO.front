@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useBlocker } from 'react-router-dom'
 import { ArrowLeft, Terminal, Loader2 } from 'lucide-react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useHost } from '../../hooks/useHosts'
 import { HostsTerminalSession } from '../../services/hostsTerminalWebSocket'
+import Modal from '../../components/Modal/Modal'
 import {
   stashTerminal,
   takeTerminal,
   destroyStashedTerminal,
-  readKeepSessionPreference,
-  writeKeepSessionPreference,
   readSshResumeKey,
   writeSshResumeKey,
   clearSshResumeKey,
@@ -113,18 +112,30 @@ export default function HostManagement() {
   /** false após "Encerrar sessão"; true = terminal visível e conectado ou conectando. */
   const [sessionActive, setSessionActive] = useState(true)
 
-  const [keepSessionOpen, setKeepSessionOpen] = useState(readKeepSessionPreference)
-  const keepSessionOpenRef = useRef(keepSessionOpen)
-  keepSessionOpenRef.current = keepSessionOpen
-
   /** Evita persistir ao sair quando o usuário pediu reinício/encerramento explícito. */
   const skipPersistNextUnmountRef = useRef(false)
 
-  const onKeepSessionChange = (e) => {
-    const v = e.target.checked
-    setKeepSessionOpen(v)
-    writeKeepSessionPreference(v)
-  }
+  /** true = manter stash ao sair (modal Sim); false = encerrar (modal Não); null = cancelar / não passou pelo modal. */
+  const stashOnLeaveChoiceRef = useRef(null)
+
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (!sessionActive || !sessionRef.current?.isOpen) return false
+    return (
+      currentLocation.pathname !== nextLocation.pathname ||
+      currentLocation.search !== nextLocation.search
+    )
+  })
+
+  useEffect(() => {
+    if (!sessionActive) return undefined
+    const onBeforeUnload = (e) => {
+      if (!sessionRef.current?.isOpen) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [sessionActive])
 
   useEffect(() => {
     if (!hostId || isLoading || !sessionActive || !surfaceRef.current) return undefined
@@ -268,6 +279,9 @@ export default function HostManagement() {
       const skip = skipPersistNextUnmountRef.current
       skipPersistNextUnmountRef.current = false
 
+      const stashChoice = stashOnLeaveChoiceRef.current
+      stashOnLeaveChoiceRef.current = null
+
       if (skip) {
         destroyStashedTerminal(hostId)
         try {
@@ -293,7 +307,7 @@ export default function HostManagement() {
       }
 
       if (
-        keepSessionOpenRef.current &&
+        stashChoice === true &&
         session?.isOpen &&
         inner &&
         term &&
@@ -368,6 +382,21 @@ export default function HostManagement() {
     setSessionEpoch((n) => n + 1)
   }
 
+  const handleLeaveModalCancel = () => {
+    stashOnLeaveChoiceRef.current = null
+    if (blocker.state === 'blocked') blocker.reset()
+  }
+
+  const handleLeaveKeepSession = () => {
+    stashOnLeaveChoiceRef.current = true
+    if (blocker.state === 'blocked') blocker.proceed()
+  }
+
+  const handleLeaveDiscardSession = () => {
+    stashOnLeaveChoiceRef.current = false
+    if (blocker.state === 'blocked') blocker.proceed()
+  }
+
   if (isLoading) {
     return (
       <div className="p-8 flex justify-center">
@@ -423,31 +452,6 @@ export default function HostManagement() {
         </div>
       </div>
 
-      <label className="flex items-start gap-2 text-xs text-gray-600 mb-2 shrink-0 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-          checked={keepSessionOpen}
-          onChange={onKeepSessionChange}
-        />
-        <span>
-          Manter sessão ao sair desta tela — o navegador mantém o WebSocket ao navegar no painel; ao
-          voltar, o terminal reaparece como estava. A sessão SSH de verdade fica só entre o serviço
-          hosts (Python) e o equipamento remoto; a API e o front só autenticam e encaminham. Após F5
-          ou fechar a aba o WebSocket cai, mas o Python pode manter o PTY destacado: este painel
-          guarda uma chave local por host para você reanexar (outro host ou perfil usa outra chave).
-          Use &quot;Encerrar sessão&quot; para encerrar o SSH no serviço hosts.
-        </span>
-      </label>
-
-      <p className="text-xs text-gray-500 mb-2 shrink-0">
-        Terminal estilo PuTTY: selecione com o botão esquerdo e solte para copiar; botão direito cola
-        da área de transferência. Duas abas no mesmo host reanexam à mesma sessão no serviço hosts (a
-        última conexão assume o fluxo). <span className="font-medium text-gray-600">Encerrar sessão</span>{' '}
-        manda encerramento explícito até o Python fechar o PTY.{' '}
-        <span className="font-medium text-gray-600">Reiniciar sessão</span> encerra o shell atual lá e abre outro.
-      </p>
-
       {sessionActive ? (
         <div className="relative flex-1 min-h-0 min-w-0 rounded-lg border border-gray-700 overflow-hidden bg-slate-900 p-1">
           {banner && (
@@ -470,6 +474,35 @@ export default function HostManagement() {
           </button>
         </div>
       )}
+
+      <Modal
+        isOpen={blocker.state === 'blocked'}
+        onClose={handleLeaveModalCancel}
+        title="Sair do console"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">Deseja manter a sessão ativa?</p>
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-200">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleLeaveModalCancel}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={handleLeaveDiscardSession}
+            >
+              Não
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleLeaveKeepSession}
+            >
+              Sim
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

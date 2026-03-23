@@ -7,8 +7,6 @@ const PERSIST_ROOT_ID = 'automais-host-terminal-persist-root'
 /** @type {Map<string, { inner: HTMLDivElement, term: import('@xterm/xterm').Terminal, fit: import('@xterm/addon-fit').FitAddon, session: import('./hostsTerminalWebSocket').HostsTerminalSession }>} */
 const storage = new Map()
 
-export const KEEP_SESSION_STORAGE_KEY = 'hosts-terminal-keep-session'
-
 /** Chave por host para reanexar o PTY no serviço hosts após F5 / fechar aba (não é o stash SPA). */
 const SSH_RESUME_PREFIX = 'automais-host-ssh-resume:'
 
@@ -36,22 +34,6 @@ export function writeSshResumeKey(hostId, key) {
 export function clearSshResumeKey(hostId) {
   try {
     localStorage.removeItem(SSH_RESUME_PREFIX + hostId)
-  } catch {
-    /* ignore */
-  }
-}
-
-export function readKeepSessionPreference() {
-  try {
-    return localStorage.getItem(KEEP_SESSION_STORAGE_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
-
-export function writeKeepSessionPreference(value) {
-  try {
-    localStorage.setItem(KEEP_SESSION_STORAGE_KEY, value ? 'true' : 'false')
   } catch {
     /* ignore */
   }
