@@ -14,6 +14,7 @@ import Routers from './pages/Routers/Routers'
 import RouterManagement from './pages/Routers/RouterManagement'
 import Hosts from './pages/Hosts/Hosts'
 import HostManagement from './pages/Hosts/HostManagement'
+import HostRemoteDisplay from './pages/Hosts/HostRemoteDisplay'
 import Users from './pages/Users/Users'
 import Vpn from './pages/Vpn/Vpn'
 import Login from './pages/Auth/Login'
@@ -92,6 +93,7 @@ const router = createBrowserRouter([
           { path: 'routers/:routerId/management', element: <RouterManagement /> },
           { path: 'hosts', element: <Hosts /> },
           { path: 'hosts/:hostId/management', element: <HostManagement /> },
+          { path: 'hosts/:hostId/display', element: <HostRemoteDisplay /> },
           { path: 'users', element: <Users /> },
           { path: 'vpn', element: <Vpn /> },
         ],

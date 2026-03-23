@@ -16,6 +16,8 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
     hostKind: 'LinuxUbuntu',
     vpnNetworkId: '',
     sshPort: 22,
+    remoteDisplayPort: 5900,
+    remoteDisplayEnabled: true,
     description: '',
   })
   const [errors, setErrors] = useState({})
@@ -29,6 +31,8 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
         hostKind: host.hostKind || 'LinuxUbuntu',
         vpnNetworkId: host.vpnNetworkId ? String(host.vpnNetworkId) : '',
         sshPort: host.sshPort ?? 22,
+        remoteDisplayPort: host.remoteDisplayPort ?? 5900,
+        remoteDisplayEnabled: host.remoteDisplayEnabled !== false,
         description: host.description || '',
       })
     } else {
@@ -37,6 +41,8 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
         hostKind: 'LinuxUbuntu',
         vpnNetworkId: '',
         sshPort: 22,
+        remoteDisplayPort: 5900,
+        remoteDisplayEnabled: true,
         description: '',
       })
     }
@@ -86,6 +92,8 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
       hostKind: formData.hostKind,
       vpnNetworkId: formData.vpnNetworkId,
       sshPort: Number(formData.sshPort) || 22,
+      remoteDisplayPort: Number(formData.remoteDisplayPort) || 5900,
+      remoteDisplayEnabled: Boolean(formData.remoteDisplayEnabled),
       description: formData.description?.trim() || null,
     }
 
@@ -165,6 +173,37 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
             value={formData.sshPort}
             onChange={handleChange}
           />
+        </div>
+
+        <div>
+          <label className="label">Porta display remoto (VNC)</label>
+          <input
+            name="remoteDisplayPort"
+            type="number"
+            min={1}
+            max={65535}
+            className="input w-full"
+            value={formData.remoteDisplayPort}
+            onChange={handleChange}
+            disabled={!formData.remoteDisplayEnabled}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Servidor VNC no host (ex.: 5900). Só usado se a opção abaixo estiver ativa.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            id="remoteDisplayEnabled"
+            name="remoteDisplayEnabled"
+            type="checkbox"
+            className="w-4 h-4 rounded border-gray-300"
+            checked={formData.remoteDisplayEnabled}
+            onChange={handleChange}
+          />
+          <label htmlFor="remoteDisplayEnabled" className="text-sm cursor-pointer">
+            Permitir display remoto no painel (VNC)
+          </label>
         </div>
 
         <div>

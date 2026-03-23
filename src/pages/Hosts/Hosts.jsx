@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Server, Plus, Search, Trash2, Edit, Terminal, AlertCircle,
+  Server, Plus, Search, Trash2, Edit, Terminal, Monitor, AlertCircle,
   Plug, Cpu, HardDrive, Database, Activity, ShieldAlert,
 } from 'lucide-react'
 import { useHosts, useDeleteHost } from '../../hooks/useHosts'
@@ -347,6 +347,8 @@ export default function Hosts() {
                     )}
                     <p className="text-xs text-gray-500 mt-1">
                       {kindLabels[h.hostKind] || h.hostKind} · SSH :{h.sshPort}
+                      {h.remoteDisplayEnabled !== false &&
+                        ` · display :${h.remoteDisplayPort ?? 5900}`}
                     </p>
 
                     {h.description && (
@@ -380,6 +382,18 @@ export default function Hosts() {
                         title="Console SSH"
                       >
                         <Terminal className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/hosts/${h.id}/display`)
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                        title="Display remoto (VNC)"
+                        disabled={h.remoteDisplayEnabled === false}
+                      >
+                        <Monitor className="w-4 h-4 text-gray-600" />
                       </button>
                       <button
                         type="button"

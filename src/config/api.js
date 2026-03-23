@@ -82,3 +82,28 @@ export function getHostsWsUrl(hostId, accessToken) {
   const q = new URLSearchParams({ access_token: String(token).trim() })
   return `${wsProto}//${host}${pathPrefix}/ws/hosts/${hostId}?${q.toString()}`
 }
+
+/**
+ * WebSocket display remoto (VNC/RFB via túnel). Mesmo host da API; JWT na query.
+ * @param {string} hostId
+ * @param {string | null | undefined} [accessToken]
+ */
+export function getRemoteDisplayWsUrl(hostId, accessToken) {
+  if (!hostId) {
+    throw new Error('hostId é obrigatório para o display remoto')
+  }
+  const token =
+    accessToken !== undefined && accessToken !== null
+      ? accessToken
+      : typeof window !== 'undefined'
+        ? localStorage.getItem('token')
+        : null
+  if (!token || !String(token).trim()) {
+    throw new Error(
+      'Sessão não encontrada: faça login novamente para usar o display remoto.'
+    )
+  }
+  const { host, pathPrefix, wsProto } = apiUrlParts()
+  const q = new URLSearchParams({ access_token: String(token).trim() })
+  return `${wsProto}//${host}${pathPrefix}/ws/remote/${hostId}?${q.toString()}`
+}
