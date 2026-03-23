@@ -13,7 +13,11 @@ export default function HostRemoteDisplay() {
   const containerRef = useRef(null)
   const rfbRef = useRef(null)
   const [status, setStatus] = useState('')
-  const [needsPassword, setNeedsPassword] = useState(false)
+  /** RA2ne/RSA-AES: o noVNC bloqueia até approveServer() após serververification. */
+  const [serverTrustPending, setServerTrustPending] = useState(false)
+  /** null | { types: string[] } — ex.: ['password'] ou ['username','password'] */
+  const [authPrompt, setAuthPrompt] = useState(null)
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
   const { data: host, isLoading, error } = useHost(hostId)
@@ -41,7 +45,10 @@ export default function HostRemoteDisplay() {
     if (!el) return undefined
 
     setStatus('Conectando…')
-    setNeedsPassword(false)
+    setServerTrustPending(false)
+    setAuthPrompt(null)
+    setUsername('')
+    setPassword('')
 
     let rfb = null
     let cancelled = false
@@ -75,13 +82,26 @@ export default function HostRemoteDisplay() {
           })
         })
         rfb.addEventListener('disconnect', (ev) => {
+          setServerTrustPending(false)
+          setAuthPrompt(null)
           setStatus(
             ev.detail.clean ? 'Desconectado' : 'Conexão encerrada (rede ou servidor VNC)'
           )
         })
-        rfb.addEventListener('credentialsrequired', () => {
-          setNeedsPassword(true)
-          setStatus('Senha VNC necessária')
+        rfb.addEventListener('serververification', () => {
+          setServerTrustPending(true)
+          setStatus(
+            'Segurança RSA do VNC: confirme o servidor para continuar (TigerVNC / RA2)'
+          )
+        })
+        rfb.addEventListener('credentialsrequired', (ev) => {
+          const types = ev.detail?.types || ['password']
+          setAuthPrompt({ types })
+          setStatus(
+            types.includes('username')
+              ? 'Utilizador e senha VNC'
+              : 'Senha VNC necessária'
+          )
         })
         rfb.addEventListener('securityfailure', (ev) => {
           const d = ev.detail || {}
@@ -108,13 +128,37 @@ export default function HostRemoteDisplay() {
     }
   }, [hostId, canConnect])
 
-  const handleSendPassword = (e) => {
+  const handleTrustServer = () => {
+    const rfb = rfbRef.current
+    if (!rfb) return
+    try {
+      rfb.approveServer()
+      setServerTrustPending(false)
+      setStatus('A continuar autenticação…')
+    } catch (err) {
+      setStatus(err?.message || 'Erro ao confirmar servidor')
+    }
+  }
+
+  const handleSendCredentials = (e) => {
     e.preventDefault()
     const rfb = rfbRef.current
-    if (!rfb || !password) return
+    if (!rfb || !authPrompt) return
+    const types = authPrompt.types
+    const creds = {}
+    if (types.includes('username')) creds.username = username.trim()
+    if (types.includes('password')) creds.password = password.trim()
+    if (types.includes('username') && !creds.username) {
+      setStatus('Indique o utilizador (ex.: pi)')
+      return
+    }
+    if (types.includes('password') && !creds.password) {
+      setStatus('Indique a senha VNC')
+      return
+    }
     try {
-      rfb.sendCredentials({ password: password.trim() })
-      setNeedsPassword(false)
+      rfb.sendCredentials(creds)
+      setAuthPrompt(null)
       setStatus('Autenticando…')
     } catch (err) {
       setStatus(err?.message || 'Erro ao enviar credenciais')
@@ -180,22 +224,55 @@ export default function HostRemoteDisplay() {
         <X className="w-5 h-5" />
       </button>
 
-      {needsPassword && (
+      {serverTrustPending && (
+        <div className="absolute top-12 left-2 right-12 z-20 flex flex-wrap items-center gap-2 p-3 rounded-lg bg-amber-950/90 border border-amber-700/50 text-amber-100 text-xs">
+          <span className="flex-1 min-w-[12rem]">
+            O VNC do host pediu confiança na chave RSA (não é imagem do ecrã). Sem confirmar, a
+            ligação fica parada.
+          </span>
+          <button type="button" className="btn btn-primary btn-sm shrink-0" onClick={handleTrustServer}>
+            Confiar e continuar
+          </button>
+        </div>
+      )}
+
+      {authPrompt && (
         <form
-          onSubmit={handleSendPassword}
+          onSubmit={handleSendCredentials}
           className="absolute top-12 left-2 right-12 z-10 flex flex-wrap items-end gap-2 p-3 rounded-lg bg-black/70 border border-white/10"
+          style={{ marginTop: serverTrustPending ? '4.5rem' : undefined }}
         >
-          <div className="flex-1 min-w-[12rem]">
-            <label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">Senha VNC</label>
-            <input
-              type="password"
-              className="input w-full bg-gray-900 border-gray-700 text-sm"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="off"
-              autoFocus
-            />
-          </div>
+          {authPrompt.types.includes('username') && (
+            <div className="flex-1 min-w-[10rem]">
+              <label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">
+                Utilizador
+              </label>
+              <input
+                type="text"
+                className="input w-full bg-gray-900 border-gray-700 text-sm"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="ex.: pi"
+                autoComplete="username"
+                autoFocus
+              />
+            </div>
+          )}
+          {authPrompt.types.includes('password') && (
+            <div className="flex-1 min-w-[12rem]">
+              <label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">
+                Senha VNC
+              </label>
+              <input
+                type="password"
+                className="input w-full bg-gray-900 border-gray-700 text-sm"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                autoFocus={!authPrompt.types.includes('username')}
+              />
+            </div>
+          )}
           <button type="submit" className="btn btn-primary btn-sm">
             Enviar
           </button>
