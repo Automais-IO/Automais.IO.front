@@ -18,6 +18,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
     sshPort: 22,
     remoteDisplayPort: 5900,
     remoteDisplayEnabled: true,
+    remoteDisplayUseBootstrapCredentials: true,
     description: '',
   })
   const [errors, setErrors] = useState({})
@@ -33,6 +34,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
         sshPort: host.sshPort ?? 22,
         remoteDisplayPort: host.remoteDisplayPort ?? 5900,
         remoteDisplayEnabled: host.remoteDisplayEnabled !== false,
+        remoteDisplayUseBootstrapCredentials: host.remoteDisplayUseBootstrapCredentials !== false,
         description: host.description || '',
       })
     } else {
@@ -43,6 +45,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
         sshPort: 22,
         remoteDisplayPort: 5900,
         remoteDisplayEnabled: true,
+        remoteDisplayUseBootstrapCredentials: true,
         description: '',
       })
     }
@@ -69,10 +72,18 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
   }, [isOpen])
 
   const handleChange = (e) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target
+    const raw =
+      type === 'checkbox'
+        ? checked
+        : name === 'sshPort'
+          ? value === ''
+            ? ''
+            : parseInt(value, 10) || 22
+          : value
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'sshPort' ? (value === '' ? '' : parseInt(value, 10) || 22) : value,
+      [name]: raw,
     }))
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }))
   }
@@ -94,6 +105,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
       sshPort: Number(formData.sshPort) || 22,
       remoteDisplayPort: Number(formData.remoteDisplayPort) || 5900,
       remoteDisplayEnabled: Boolean(formData.remoteDisplayEnabled),
+      remoteDisplayUseBootstrapCredentials: Boolean(formData.remoteDisplayUseBootstrapCredentials),
       description: formData.description?.trim() || null,
     }
 
@@ -203,6 +215,25 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
           />
           <label htmlFor="remoteDisplayEnabled" className="text-sm cursor-pointer">
             Permitir display remoto no painel (VNC)
+          </label>
+        </div>
+
+        <div className="flex items-start gap-2">
+          <input
+            id="remoteDisplayUseBootstrapCredentials"
+            name="remoteDisplayUseBootstrapCredentials"
+            type="checkbox"
+            className="w-4 h-4 rounded border-gray-300 mt-0.5"
+            checked={formData.remoteDisplayUseBootstrapCredentials}
+            onChange={handleChange}
+            disabled={!formData.remoteDisplayEnabled}
+          />
+          <label htmlFor="remoteDisplayUseBootstrapCredentials" className="text-sm cursor-pointer leading-snug">
+            Enviar automaticamente utilizador/senha do bootstrap (SSH) ao abrir o VNC
+            <span className="block text-xs text-gray-500 font-normal mt-1">
+              Desative se o VNC usar outro utilizador (ex.: pi) ou senha própria — caso contrário o servidor pode
+              responder &quot;Access is denied&quot;.
+            </span>
           </label>
         </div>
 

@@ -19,11 +19,23 @@ export default function HostRemoteDisplay() {
   const [authPrompt, setAuthPrompt] = useState(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  /** Após "Access is denied" com credenciais do portal — nova tentativa sem injetar senha. */
+  const [skipPortalVncCreds, setSkipPortalVncCreds] = useState(false)
+  const [rfbSessionKey, setRfbSessionKey] = useState(0)
+  const [vncAccessDeniedHint, setVncAccessDeniedHint] = useState(false)
 
   const { data: host, isLoading, error } = useHost(hostId)
 
   const canConnect = Boolean(host && host.remoteDisplayEnabled !== false)
-  const credsQuery = useRemoteDisplayCredentials(hostId, canConnect)
+  const useBootstrapForVnc =
+    host?.remoteDisplayUseBootstrapCredentials !== false && !skipPortalVncCreds
+  const credsQuery = useRemoteDisplayCredentials(hostId, canConnect && useBootstrapForVnc)
+
+  useEffect(() => {
+    setSkipPortalVncCreds(false)
+    setRfbSessionKey(0)
+    setVncAccessDeniedHint(false)
+  }, [hostId])
 
   useEffect(() => {
     if (host?.sshUsername) setUsername(host.sshUsername)
@@ -52,7 +64,7 @@ export default function HostRemoteDisplay() {
     if (!el) return undefined
 
     setStatus(
-      credsQuery.data?.hasPassword
+      useBootstrapForVnc && credsQuery.data?.hasPassword
         ? 'Conectando… (credenciais do portal)'
         : 'Conectando…'
     )
@@ -82,7 +94,7 @@ export default function HostRemoteDisplay() {
         el.innerHTML = ''
         const portal = credsQuery.data
         const rfbOpts =
-          portal?.hasPassword && portal.password
+          useBootstrapForVnc && portal?.hasPassword && portal.password
             ? {
                 credentials: {
                   username: portal.username || 'automais-io',
@@ -96,6 +108,7 @@ export default function HostRemoteDisplay() {
         rfb.background = 'rgb(20, 20, 20)'
 
         rfb.addEventListener('connect', () => {
+          setVncAccessDeniedHint(false)
           setStatus('Conectado')
           requestAnimationFrame(() => {
             window.dispatchEvent(new Event('resize'))
@@ -125,7 +138,15 @@ export default function HostRemoteDisplay() {
         })
         rfb.addEventListener('securityfailure', (ev) => {
           const d = ev.detail || {}
-          setStatus(d.reason || d.status || 'Falha de segurança na sessão VNC')
+          const reason = String(d.reason || d.status || '')
+          const denied =
+            /denied|recusad|negad|authentication failed|auth failed/i.test(reason)
+          if (denied) setVncAccessDeniedHint(true)
+          setStatus(
+            denied
+              ? `${reason || 'Acesso negado'} — o VNC não aceitou as credenciais enviadas (utilizador/senha diferentes do SSH?).`
+              : reason || 'Falha de segurança na sessão VNC'
+          )
         })
         rfbRef.current = rfb
       } catch (e) {
@@ -146,7 +167,22 @@ export default function HostRemoteDisplay() {
       }
       if (el) el.innerHTML = ''
     }
-  }, [hostId, canConnect, credsQuery.isPending, credsQuery.data])
+  }, [
+    hostId,
+    canConnect,
+    credsQuery.isPending,
+    credsQuery.data,
+    useBootstrapForVnc,
+    rfbSessionKey,
+  ])
+
+  const handleRetryWithoutPortalVncPassword = () => {
+    setVncAccessDeniedHint(false)
+    setSkipPortalVncCreds(true)
+    setRfbSessionKey((k) => k + 1)
+    setAuthPrompt(null)
+    setServerTrustPending(false)
+  }
 
   const handleTrustServer = () => {
     const rfb = rfbRef.current
@@ -243,6 +279,32 @@ export default function HostRemoteDisplay() {
       >
         <X className="w-5 h-5" />
       </button>
+
+      {vncAccessDeniedHint && (
+        <div className="absolute top-12 left-2 right-12 z-30 flex flex-col gap-2 p-3 rounded-lg bg-red-950/90 border border-red-800/60 text-red-100 text-xs">
+          <p>
+            O servidor VNC recusou o login. Isto costuma acontecer quando o painel envia{' '}
+            <strong>automais-io</strong> e a senha do bootstrap, mas o VNC no equipamento espera outro
+            utilizador (ex.: <strong>pi</strong>) ou outra senha.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleRetryWithoutPortalVncPassword}>
+              Tentar de novo sem credenciais do portal
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm text-red-200"
+              onClick={() => navigate('/hosts')}
+            >
+              Editar host no painel
+            </button>
+          </div>
+          <p className="text-red-200/80">
+            Em <strong>Editar host</strong> podes desmarcar &quot;Enviar automaticamente utilizador/senha do
+            bootstrap&quot; para este equipamento.
+          </p>
+        </div>
+      )}
 
       {serverTrustPending && (
         <div className="absolute top-12 left-2 right-12 z-20 flex flex-wrap items-center gap-2 p-3 rounded-lg bg-amber-950/90 border border-amber-700/50 text-amber-100 text-xs">
