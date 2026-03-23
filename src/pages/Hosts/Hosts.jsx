@@ -9,6 +9,7 @@ import HostModal from '../../components/Modal/HostModal'
 import ConnectHostModal from '../../components/Modal/ConnectHostModal'
 import Modal from '../../components/Modal/Modal'
 import clsx from 'clsx'
+import { openRemoteDisplayWindow } from '../../utils/openRemoteDisplayWindow'
 
 const statusLabels = {
   Online: { label: 'Online', color: 'badge-success' },
@@ -387,10 +388,14 @@ export default function Hosts() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          navigate(`/hosts/${h.id}/display`)
+                          if (!openRemoteDisplayWindow(h.id)) {
+                            window.alert(
+                              'Não foi possível abrir a janela do display. Permita pop-ups para este site e tente de novo.'
+                            )
+                          }
                         }}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                        title="Display remoto (VNC)"
+                        title="Display remoto (VNC) — abre em janela"
                         disabled={h.remoteDisplayEnabled === false}
                       >
                         <Monitor className="w-4 h-4 text-gray-600" />

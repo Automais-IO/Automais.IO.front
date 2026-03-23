@@ -1,0 +1,16 @@
+diff --git a/node_modules/@novnc/novnc/lib/util/browser.js b/node_modules/@novnc/novnc/lib/util/browser.js
+index 8121bc1..973228f 100644
+--- a/node_modules/@novnc/novnc/lib/util/browser.js
++++ b/node_modules/@novnc/novnc/lib/util/browser.js
+@@ -130,6 +130,11 @@ function _checkWebCodecsH264DecodeSupport2() {
+           decoder = new VideoDecoder({
+             output: function output(frame) {
+               gotframe = true;
++              try {
++                frame.close();
++              } catch (_unused) {
++                /* ignore */
++              }
+             },
+             error: function error(e) {
+               _error = e;

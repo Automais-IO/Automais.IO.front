@@ -83,6 +83,10 @@ const router = createBrowserRouter([
     element: <RequireFullSession />,
     children: [
       {
+        path: 'remote-display/:hostId',
+        element: <HostRemoteDisplay />,
+      },
+      {
         element: <Layout />,
         children: [
           { index: true, element: <Dashboard /> },
@@ -93,7 +97,6 @@ const router = createBrowserRouter([
           { path: 'routers/:routerId/management', element: <RouterManagement /> },
           { path: 'hosts', element: <Hosts /> },
           { path: 'hosts/:hostId/management', element: <HostManagement /> },
-          { path: 'hosts/:hostId/display', element: <HostRemoteDisplay /> },
           { path: 'users', element: <Users /> },
           { path: 'vpn', element: <Vpn /> },
         ],

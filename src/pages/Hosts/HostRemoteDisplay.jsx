@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Monitor, Loader2 } from 'lucide-react'
+import { Monitor, Loader2, X } from 'lucide-react'
 import RFBImport from '@novnc/novnc/lib/rfb.js'
 import { useHost } from '../../hooks/useHosts'
 import { getRemoteDisplayWsUrl } from '../../config/api'
@@ -18,8 +18,18 @@ export default function HostRemoteDisplay() {
 
   const { data: host, isLoading, error } = useHost(hostId)
 
-  /** Evita reabrir o VNC a cada refetch do React Query (novo objeto `host`). */
   const canConnect = Boolean(host && host.remoteDisplayEnabled !== false)
+
+  useEffect(() => {
+    if (host?.name) {
+      document.title = `${host.name} · Display`
+    } else {
+      document.title = 'Display remoto'
+    }
+    return () => {
+      document.title = 'Automais IoT Platform'
+    }
+  }, [host?.name])
 
   useEffect(() => {
     if (!hostId || !canConnect) return undefined
@@ -36,7 +46,7 @@ export default function HostRemoteDisplay() {
       rfb = new RFB(el, url, {})
       rfb.scaleViewport = true
       rfb.resizeSession = false
-      rfb.background = 'rgb(30, 30, 30)'
+      rfb.background = 'rgb(20, 20, 20)'
 
       rfb.addEventListener('connect', () => setStatus('Conectado'))
       rfb.addEventListener('disconnect', (ev) => {
@@ -46,7 +56,7 @@ export default function HostRemoteDisplay() {
       })
       rfb.addEventListener('credentialsrequired', () => {
         setNeedsPassword(true)
-        setStatus('Informe a senha do VNC (se o servidor exigir)')
+        setStatus('Senha VNC necessária')
       })
       rfb.addEventListener('securityfailure', (ev) => {
         const d = ev.detail || {}
@@ -81,21 +91,34 @@ export default function HostRemoteDisplay() {
     }
   }
 
+  const handleClose = () => {
+    if (window.opener) {
+      window.close()
+      return
+    }
+    navigate('/hosts', { replace: true })
+  }
+
+  const shellClass =
+    'fixed inset-0 z-[100] flex flex-col bg-[#121212] text-gray-300 overflow-hidden'
+
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center gap-2 text-gray-600">
-        <Loader2 className="w-6 h-6 animate-spin" />
-        Carregando host…
+      <div className={`${shellClass} items-center justify-center gap-2`}>
+        <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+        <span className="text-sm text-gray-500">Carregando…</span>
       </div>
     )
   }
 
   if (error || !host) {
     return (
-      <div className="p-6 max-w-xl mx-auto">
-        <p className="text-red-600">Não foi possível carregar o host.</p>
-        <button type="button" className="btn btn-ghost btn-sm mt-4" onClick={() => navigate('/hosts')}>
-          Voltar
+      <div className={`${shellClass} items-center justify-center p-6`}>
+        <p className="text-red-400 text-sm text-center max-w-md">
+          Não foi possível carregar o host.
+        </p>
+        <button type="button" className="btn btn-ghost btn-sm mt-4 text-gray-400" onClick={handleClose}>
+          Fechar
         </button>
       </div>
     )
@@ -103,53 +126,44 @@ export default function HostRemoteDisplay() {
 
   if (host.remoteDisplayEnabled === false) {
     return (
-      <div className="p-6 max-w-xl mx-auto">
-        <button type="button" className="btn btn-ghost btn-sm mb-4" onClick={() => navigate('/hosts')}>
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Voltar
-        </button>
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <Monitor className="w-6 h-6" />
-          {host.name}
-        </h1>
-        <p className="text-gray-600 mt-2">
-          O display remoto está desabilitado para este host. Ative em &quot;Editar host&quot; no painel.
+      <div className={`${shellClass} items-center justify-center p-6`}>
+        <Monitor className="w-10 h-10 text-gray-600 mb-2" />
+        <p className="text-sm text-gray-500 text-center max-w-sm">
+          Display remoto desabilitado para este host. Ative em &quot;Editar host&quot; no painel.
         </p>
+        <button type="button" className="btn btn-ghost btn-sm mt-4 text-gray-400" onClick={handleClose}>
+          Fechar
+        </button>
       </div>
     )
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] min-h-0 overflow-hidden box-border">
-      <div className="flex items-center gap-3 mb-4 shrink-0 flex-wrap">
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/hosts')}>
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Monitor className="w-6 h-6" />
-            {host.name}
-          </h1>
-          <p className="text-sm text-gray-600 font-mono truncate">
-            {host.vpnIp}:{host.remoteDisplayPort ?? 5900} · display remoto (VNC) · requer servidor VNC no host
-          </p>
-        </div>
-        <div className="text-sm text-gray-500 shrink-0 max-w-full">{status}</div>
-      </div>
+    <div className={shellClass}>
+      <button
+        type="button"
+        onClick={handleClose}
+        className="absolute top-2 right-2 z-10 p-2 rounded-md bg-black/50 hover:bg-black/70 text-gray-400 hover:text-white transition-colors"
+        title="Fechar"
+        aria-label="Fechar janela de display"
+      >
+        <X className="w-5 h-5" />
+      </button>
 
       {needsPassword && (
         <form
           onSubmit={handleSendPassword}
-          className="flex flex-wrap items-end gap-2 mb-3 shrink-0"
+          className="absolute top-12 left-2 right-12 z-10 flex flex-wrap items-end gap-2 p-3 rounded-lg bg-black/70 border border-white/10"
         >
-          <div>
-            <label className="label text-xs">Senha VNC</label>
+          <div className="flex-1 min-w-[12rem]">
+            <label className="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">Senha VNC</label>
             <input
               type="password"
-              className="input w-56"
+              className="input w-full bg-gray-900 border-gray-700 text-sm"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="off"
+              autoFocus
             />
           </div>
           <button type="submit" className="btn btn-primary btn-sm">
@@ -158,15 +172,16 @@ export default function HostRemoteDisplay() {
         </form>
       )}
 
-      <p className="text-xs text-gray-500 mb-2 shrink-0">
-        O tráfego passa pelo painel autenticado. Instale e inicie um servidor VNC (ex.: TigerVNC, x11vnc)
-        no host escutando na porta configurada.
-      </p>
+      {status && (
+        <div
+          className="absolute bottom-2 left-2 right-14 z-10 text-[11px] text-gray-500 truncate pointer-events-none"
+          title={status}
+        >
+          {status}
+        </div>
+      )}
 
-      <div
-        ref={containerRef}
-        className="flex-1 min-h-0 w-full rounded-lg border border-gray-200 bg-gray-900 overflow-hidden"
-      />
+      <div ref={containerRef} className="flex-1 min-h-0 w-full h-full" />
     </div>
   )
 }
