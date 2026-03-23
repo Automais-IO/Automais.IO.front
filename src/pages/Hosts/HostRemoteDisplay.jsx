@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Monitor, Loader2, X } from 'lucide-react'
 import RFBImport from '@novnc/novnc/lib/rfb.js'
@@ -31,7 +31,11 @@ export default function HostRemoteDisplay() {
     }
   }, [host?.name])
 
-  useEffect(() => {
+  /**
+   * noVNC: se o alvo tiver 0×0 no handshake, autoscale usa scaleRatio 0 → framebuffer invisível.
+   * Popups medem 0 no 1º frame; só instanciamos o RFB quando o contentor tem tamanho real.
+   */
+  useLayoutEffect(() => {
     if (!hostId || !canConnect) return undefined
     const el = containerRef.current
     if (!el) return undefined
@@ -40,34 +44,55 @@ export default function HostRemoteDisplay() {
     setNeedsPassword(false)
 
     let rfb = null
-    try {
-      const url = getRemoteDisplayWsUrl(hostId)
-      el.innerHTML = ''
-      rfb = new RFB(el, url, {})
-      rfb.scaleViewport = true
-      rfb.resizeSession = false
-      rfb.background = 'rgb(20, 20, 20)'
+    let cancelled = false
+    let rafId = 0
 
-      rfb.addEventListener('connect', () => setStatus('Conectado'))
-      rfb.addEventListener('disconnect', (ev) => {
-        setStatus(
-          ev.detail.clean ? 'Desconectado' : 'Conexão encerrada (rede ou servidor VNC)'
-        )
-      })
-      rfb.addEventListener('credentialsrequired', () => {
-        setNeedsPassword(true)
-        setStatus('Senha VNC necessária')
-      })
-      rfb.addEventListener('securityfailure', (ev) => {
-        const d = ev.detail || {}
-        setStatus(d.reason || d.status || 'Falha de segurança na sessão VNC')
-      })
-      rfbRef.current = rfb
-    } catch (e) {
-      setStatus(e?.message || 'Erro ao iniciar o cliente de display remoto')
+    const connectWhenSized = () => {
+      if (cancelled) return
+      const { clientWidth, clientHeight } = el
+      if (clientWidth < 2 || clientHeight < 2) {
+        rafId = requestAnimationFrame(connectWhenSized)
+        return
+      }
+
+      try {
+        const url = getRemoteDisplayWsUrl(hostId)
+        el.innerHTML = ''
+        rfb = new RFB(el, url, {})
+        rfb.scaleViewport = true
+        rfb.resizeSession = false
+        rfb.background = 'rgb(20, 20, 20)'
+
+        rfb.addEventListener('connect', () => {
+          setStatus('Conectado')
+          requestAnimationFrame(() => {
+            window.dispatchEvent(new Event('resize'))
+          })
+        })
+        rfb.addEventListener('disconnect', (ev) => {
+          setStatus(
+            ev.detail.clean ? 'Desconectado' : 'Conexão encerrada (rede ou servidor VNC)'
+          )
+        })
+        rfb.addEventListener('credentialsrequired', () => {
+          setNeedsPassword(true)
+          setStatus('Senha VNC necessária')
+        })
+        rfb.addEventListener('securityfailure', (ev) => {
+          const d = ev.detail || {}
+          setStatus(d.reason || d.status || 'Falha de segurança na sessão VNC')
+        })
+        rfbRef.current = rfb
+      } catch (e) {
+        setStatus(e?.message || 'Erro ao iniciar o cliente de display remoto')
+      }
     }
 
+    connectWhenSized()
+
     return () => {
+      cancelled = true
+      if (rafId) cancelAnimationFrame(rafId)
       rfbRef.current = null
       try {
         rfb?.disconnect()
@@ -100,11 +125,11 @@ export default function HostRemoteDisplay() {
   }
 
   const shellClass =
-    'fixed inset-0 z-[100] flex flex-col bg-[#121212] text-gray-300 overflow-hidden'
+    'fixed inset-0 z-[100] bg-[#121212] text-gray-300 overflow-hidden'
 
   if (isLoading) {
     return (
-      <div className={`${shellClass} items-center justify-center gap-2`}>
+      <div className={`${shellClass} flex items-center justify-center gap-2`}>
         <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
         <span className="text-sm text-gray-500">Carregando…</span>
       </div>
@@ -113,7 +138,7 @@ export default function HostRemoteDisplay() {
 
   if (error || !host) {
     return (
-      <div className={`${shellClass} items-center justify-center p-6`}>
+      <div className={`${shellClass} flex flex-col items-center justify-center p-6`}>
         <p className="text-red-400 text-sm text-center max-w-md">
           Não foi possível carregar o host.
         </p>
@@ -126,7 +151,7 @@ export default function HostRemoteDisplay() {
 
   if (host.remoteDisplayEnabled === false) {
     return (
-      <div className={`${shellClass} items-center justify-center p-6`}>
+      <div className={`${shellClass} flex flex-col items-center justify-center p-6`}>
         <Monitor className="w-10 h-10 text-gray-600 mb-2" />
         <p className="text-sm text-gray-500 text-center max-w-sm">
           Display remoto desabilitado para este host. Ative em &quot;Editar host&quot; no painel.
@@ -139,7 +164,7 @@ export default function HostRemoteDisplay() {
   }
 
   return (
-    <div className={shellClass}>
+    <div className={`${shellClass} relative`}>
       <button
         type="button"
         onClick={handleClose}
@@ -181,7 +206,7 @@ export default function HostRemoteDisplay() {
         </div>
       )}
 
-      <div ref={containerRef} className="flex-1 min-h-0 w-full h-full" />
+      <div ref={containerRef} className="absolute inset-0 overflow-hidden" />
     </div>
   )
 }
