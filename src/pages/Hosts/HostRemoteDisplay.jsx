@@ -46,11 +46,16 @@ export default function HostRemoteDisplay() {
     let rfb = null
     let cancelled = false
     let rafId = 0
+    let sizeAttempts = 0
+    /** Evita loop infinito se o contentor não medir (ex. conflito CSS); ~2s a 60fps. */
+    const maxSizeAttempts = 120
 
     const connectWhenSized = () => {
       if (cancelled) return
       const { clientWidth, clientHeight } = el
-      if (clientWidth < 2 || clientHeight < 2) {
+      sizeAttempts += 1
+      const tooSmall = clientWidth < 2 || clientHeight < 2
+      if (tooSmall && sizeAttempts < maxSizeAttempts) {
         rafId = requestAnimationFrame(connectWhenSized)
         return
       }
@@ -164,7 +169,7 @@ export default function HostRemoteDisplay() {
   }
 
   return (
-    <div className={`${shellClass} relative`}>
+    <div className={shellClass}>
       <button
         type="button"
         onClick={handleClose}
