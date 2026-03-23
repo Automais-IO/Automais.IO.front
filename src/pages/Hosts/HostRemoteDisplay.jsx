@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Monitor, Loader2, X } from 'lucide-react'
 import RFBImport from '@novnc/novnc/lib/rfb.js'
-import { useHost } from '../../hooks/useHosts'
+import { useHost, useRemoteDisplayCredentials } from '../../hooks/useHosts'
 import { getRemoteDisplayWsUrl } from '../../config/api'
 
 const RFB = RFBImport.default ?? RFBImport
@@ -23,6 +23,11 @@ export default function HostRemoteDisplay() {
   const { data: host, isLoading, error } = useHost(hostId)
 
   const canConnect = Boolean(host && host.remoteDisplayEnabled !== false)
+  const credsQuery = useRemoteDisplayCredentials(hostId, canConnect)
+
+  useEffect(() => {
+    if (host?.sshUsername) setUsername(host.sshUsername)
+  }, [host?.sshUsername])
 
   useEffect(() => {
     if (host?.name) {
@@ -41,13 +46,18 @@ export default function HostRemoteDisplay() {
    */
   useLayoutEffect(() => {
     if (!hostId || !canConnect) return undefined
+    if (credsQuery.isPending) return undefined
+
     const el = containerRef.current
     if (!el) return undefined
 
-    setStatus('Conectando…')
+    setStatus(
+      credsQuery.data?.hasPassword
+        ? 'Conectando… (credenciais do portal)'
+        : 'Conectando…'
+    )
     setServerTrustPending(false)
     setAuthPrompt(null)
-    setUsername('')
     setPassword('')
 
     let rfb = null
@@ -70,7 +80,17 @@ export default function HostRemoteDisplay() {
       try {
         const url = getRemoteDisplayWsUrl(hostId)
         el.innerHTML = ''
-        rfb = new RFB(el, url, {})
+        const portal = credsQuery.data
+        const rfbOpts =
+          portal?.hasPassword && portal.password
+            ? {
+                credentials: {
+                  username: portal.username || 'automais-io',
+                  password: portal.password,
+                },
+              }
+            : {}
+        rfb = new RFB(el, url, rfbOpts)
         rfb.scaleViewport = true
         rfb.resizeSession = false
         rfb.background = 'rgb(20, 20, 20)'
@@ -126,7 +146,7 @@ export default function HostRemoteDisplay() {
       }
       if (el) el.innerHTML = ''
     }
-  }, [hostId, canConnect])
+  }, [hostId, canConnect, credsQuery.isPending, credsQuery.data])
 
   const handleTrustServer = () => {
     const rfb = rfbRef.current
@@ -252,7 +272,7 @@ export default function HostRemoteDisplay() {
                 className="input w-full bg-gray-900 border-gray-700 text-sm"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="ex.: pi"
+                placeholder={host?.sshUsername ? host.sshUsername : 'ex.: automais-io'}
                 autoComplete="username"
                 autoFocus
               />

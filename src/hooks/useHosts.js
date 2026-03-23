@@ -23,6 +23,16 @@ export const useHost = (id) =>
     enabled: !!id,
   })
 
+/** Senha bootstrap do host para display remoto (mesmo par que SSH se o VNC estiver configurado assim). */
+export const useRemoteDisplayCredentials = (hostId, enabled) =>
+  useQuery({
+    queryKey: ['host', hostId, 'remote-display-credentials'],
+    queryFn: () => hostsApi.getRemoteDisplayCredentials(hostId),
+    enabled: Boolean(hostId && enabled),
+    staleTime: 60_000,
+    retry: false,
+  })
+
 export const useCreateHost = () => {
   const qc = useQueryClient()
   const tenantId = getTenantId()

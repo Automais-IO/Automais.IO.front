@@ -12,6 +12,12 @@ export const hostsApi = {
     return response.data
   },
 
+  /** Credenciais bootstrap (utilizador + senha) para noVNC — só após JWT; requer VNC alinhado ao SSH no host. */
+  getRemoteDisplayCredentials: async (id) => {
+    const response = await api.get(`/hosts/${id}/remote-display-credentials`)
+    return response.data
+  },
+
   create: async (tenantId, data) => {
     const response = await api.post(`/tenants/${tenantId}/hosts`, data)
     return response.data
