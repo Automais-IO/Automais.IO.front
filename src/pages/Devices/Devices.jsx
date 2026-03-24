@@ -288,6 +288,8 @@ export default function Devices() {
               <tbody className="divide-y divide-gray-200 bg-white">
                 {filteredDevices.map((device) => {
                   const appId = device.applicationId ?? device.application_id
+                  const devEui = device.devEui ?? device.dev_eui ?? ''
+                  const wdDisabled = !String(devEui).trim()
                   const wdOn = device.webDeviceEnabled ?? device.web_device_enabled
                   const wdTok = device.webDeviceTokenConfigured ?? device.web_device_token_configured
                   return (
