@@ -9,6 +9,7 @@ import Layout from './components/Layout/Layout'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Applications from './pages/Applications/Applications'
 import Devices from './pages/Devices/Devices'
+import DeviceWebUi from './pages/Devices/DeviceWebUi'
 import Gateways from './pages/Gateways/Gateways'
 import Routers from './pages/Routers/Routers'
 import RouterManagement from './pages/Routers/RouterManagement'
@@ -85,6 +86,10 @@ const router = createBrowserRouter([
       {
         path: 'remote-display/:hostId',
         element: <HostRemoteDisplay />,
+      },
+      {
+        path: 'devices/:deviceId/web-ui/*',
+        element: <DeviceWebUi />,
       },
       {
         element: <Layout />,

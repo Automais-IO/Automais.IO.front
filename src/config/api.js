@@ -88,6 +88,36 @@ export function getHostsWsUrl(hostId, accessToken) {
  * @param {string} hostId
  * @param {string | null | undefined} [accessToken]
  */
+/**
+ * URL absoluta da UI web do device (proxy HTTP na API). JWT na query para o iframe.
+ * @param {string} deviceId GUID
+ * @param {string} [relativePath] caminho após /web-ui/ (ex.: "style.css" ou "api/foo")
+ * @param {string | null | undefined} [accessToken]
+ */
+export function getDeviceWebUiUrl(deviceId, relativePath = '', accessToken) {
+  if (!deviceId) {
+    throw new Error('deviceId é obrigatório para abrir a UI remota do device')
+  }
+  const token =
+    accessToken !== undefined && accessToken !== null
+      ? accessToken
+      : typeof window !== 'undefined'
+        ? localStorage.getItem('token')
+        : null
+  if (!token || !String(token).trim()) {
+    throw new Error('Sessão não encontrada: faça login novamente.')
+  }
+  const base = API_BASE_URL.replace(/\/$/, '')
+  let pathSuffix = ''
+  if (relativePath && relativePath !== '/') {
+    const clean = String(relativePath).replace(/^\/+/, '')
+    pathSuffix = clean ? `/${clean}` : ''
+  }
+  const url = new URL(`${base}/devices/${deviceId}/web-ui${pathSuffix || '/'}`)
+  url.searchParams.set('access_token', String(token).trim())
+  return url.toString()
+}
+
 export function getRemoteDisplayWsUrl(hostId, accessToken) {
   if (!hostId) {
     throw new Error('hostId é obrigatório para o display remoto')
