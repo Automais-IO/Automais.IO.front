@@ -29,7 +29,7 @@ export const useEnableWebDevice = () => {
   const queryClient = useQueryClient()
   const tenantId = getTenantId()
   return useMutation({
-    mutationFn: (deviceId) => devicesApi.enableWebDevice(deviceId),
+    mutationFn: (devEui) => devicesApi.enableWebDevice(devEui),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices', tenantId] })
     },
@@ -40,7 +40,7 @@ export const useRegenerateWebDeviceToken = () => {
   const queryClient = useQueryClient()
   const tenantId = getTenantId()
   return useMutation({
-    mutationFn: (deviceId) => devicesApi.regenerateWebDeviceToken(deviceId),
+    mutationFn: (devEui) => devicesApi.regenerateWebDeviceToken(devEui),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices', tenantId] })
     },
@@ -51,7 +51,7 @@ export const useDisableWebDevice = () => {
   const queryClient = useQueryClient()
   const tenantId = getTenantId()
   return useMutation({
-    mutationFn: (deviceId) => devicesApi.disableWebDevice(deviceId),
+    mutationFn: (devEui) => devicesApi.disableWebDevice(devEui),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices', tenantId] })
     },

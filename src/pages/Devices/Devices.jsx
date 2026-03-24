@@ -88,9 +88,9 @@ export default function Devices() {
     webOn: list.filter((d) => d.webDeviceEnabled).length,
   }
 
-  const runEnable = async (id) => {
+  const runEnable = async (devEui) => {
     try {
-      const res = await enableWd.mutateAsync(id)
+      const res = await enableWd.mutateAsync(devEui)
       const tok = res.token ?? res.Token
       if (tok) setTokenDialog({ token: tok, message: res.message ?? res.Message })
       await refetch()
@@ -111,10 +111,10 @@ export default function Devices() {
     }
   }
 
-  const runDisable = async (id) => {
+  const runDisable = async (devEui) => {
     if (!window.confirm('Desabilitar o acesso remoto à interface deste device?')) return
     try {
-      await disableWd.mutateAsync(id)
+      await disableWd.mutateAsync(devEui)
       await refetch()
     } catch (e) {
       alert(e.message || 'Falha ao desabilitar')
@@ -331,8 +331,9 @@ export default function Devices() {
                             <button
                               type="button"
                               className="btn btn-sm btn-outline"
-                              disabled={enableWd.isPending}
-                              onClick={() => runEnable(device.id)}
+                              disabled={enableWd.isPending || wdDisabled}
+                              title={wdDisabled ? 'Device sem DevEUI' : undefined}
+                              onClick={() => runEnable(devEui)}
                             >
                               <KeyRound className="w-3 h-3 mr-1" />
                               Habilitar
@@ -342,8 +343,8 @@ export default function Devices() {
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline"
-                                disabled={regenWd.isPending}
-                                onClick={() => runRegen(device.id)}
+                                disabled={regenWd.isPending || wdDisabled}
+                                onClick={() => runRegen(devEui)}
                               >
                                 <RefreshCw className="w-3 h-3 mr-1" />
                                 Novo token
@@ -351,14 +352,14 @@ export default function Devices() {
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline text-red-700 border-red-200"
-                                disabled={disableWd.isPending}
-                                onClick={() => runDisable(device.id)}
+                                disabled={disableWd.isPending || wdDisabled}
+                                onClick={() => runDisable(devEui)}
                               >
                                 <Power className="w-3 h-3 mr-1" />
                                 Desligar
                               </button>
                               <Link
-                                to={`/devices/${device.id}/web-ui/`}
+                                to={`/devices/${encodeURIComponent(devEui)}/web-ui/`}
                                 className="btn btn-sm btn-primary inline-flex items-center"
                               >
                                 <ExternalLink className="w-3 h-3 mr-1" />

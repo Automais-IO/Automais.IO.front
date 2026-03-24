@@ -7,12 +7,12 @@ export const devicesApi = {
   create: (tenantId, payload) =>
     api.post(`/tenants/${tenantId}/devices`, payload).then((r) => r.data),
 
-  enableWebDevice: (deviceId) =>
-    api.post(`/devices/${deviceId}/web-device/enable`).then((r) => r.data),
+  enableWebDevice: (devEui) =>
+    api.post(`/devices/${encodeURIComponent(devEui)}/web-device/enable`).then((r) => r.data),
 
-  regenerateWebDeviceToken: (deviceId) =>
-    api.post(`/devices/${deviceId}/web-device/regenerate-token`).then((r) => r.data),
+  regenerateWebDeviceToken: (devEui) =>
+    api.post(`/devices/${encodeURIComponent(devEui)}/web-device/regenerate-token`).then((r) => r.data),
 
-  disableWebDevice: (deviceId) =>
-    api.post(`/devices/${deviceId}/web-device/disable`).then((r) => r.data),
+  disableWebDevice: (devEui) =>
+    api.post(`/devices/${encodeURIComponent(devEui)}/web-device/disable`).then((r) => r.data),
 }

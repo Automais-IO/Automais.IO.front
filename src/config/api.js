@@ -90,13 +90,13 @@ export function getHostsWsUrl(hostId, accessToken) {
  */
 /**
  * URL absoluta da UI web do device (proxy HTTP na API). JWT na query para o iframe.
- * @param {string} deviceId GUID
+ * @param {string} devEui DevEUI do device (hex, ex.: 16 caracteres LoRaWAN)
  * @param {string} [relativePath] caminho após /web-ui/ (ex.: "style.css" ou "api/foo")
  * @param {string | null | undefined} [accessToken]
  */
-export function getDeviceWebUiUrl(deviceId, relativePath = '', accessToken) {
-  if (!deviceId) {
-    throw new Error('deviceId é obrigatório para abrir a UI remota do device')
+export function getDeviceWebUiUrl(devEui, relativePath = '', accessToken) {
+  if (!devEui) {
+    throw new Error('DevEUI é obrigatório para abrir a UI remota do device')
   }
   const token =
     accessToken !== undefined && accessToken !== null
@@ -113,7 +113,8 @@ export function getDeviceWebUiUrl(deviceId, relativePath = '', accessToken) {
     const clean = String(relativePath).replace(/^\/+/, '')
     pathSuffix = clean ? `/${clean}` : ''
   }
-  const url = new URL(`${base}/devices/${deviceId}/web-ui${pathSuffix || '/'}`)
+  const enc = encodeURIComponent(String(devEui).trim())
+  const url = new URL(`${base}/devices/${enc}/web-ui${pathSuffix || '/'}`)
   url.searchParams.set('access_token', String(token).trim())
   return url.toString()
 }

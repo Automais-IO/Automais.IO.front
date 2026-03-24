@@ -47,7 +47,7 @@ export default function DeviceWebUi() {
           <ArrowLeft className="w-4 h-4" />
           Devices
         </Link>
-        <span className="text-xs text-gray-500 font-mono truncate" title={deviceId}>
+        <span className="text-xs text-gray-500 font-mono truncate" title={`DevEUI ${deviceId}`}>
           {deviceId}
         </span>
       </header>
