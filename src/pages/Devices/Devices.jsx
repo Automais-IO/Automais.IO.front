@@ -19,6 +19,7 @@ import {
   useEnableWebDevice,
   useRegenerateWebDeviceToken,
 } from '../../hooks/useDevices'
+import DeviceModal from '../../components/Modal/DeviceModal'
 
 const kindLabels = {
   1: 'LoRaWAN',
@@ -63,6 +64,7 @@ export default function Devices() {
   const [searchTerm, setSearchTerm] = useState('')
   const [applicationFilter, setApplicationFilter] = useState('all')
   const [tokenDialog, setTokenDialog] = useState(null)
+  const [deviceModalOpen, setDeviceModalOpen] = useState(false)
 
   const appNameById = Object.fromEntries(
     (applications ?? []).map((a) => [a.id, a.name])
@@ -138,8 +140,16 @@ export default function Devices() {
     )
   }
 
+  const canCreateDevice = (applications ?? []).length > 0
+
   return (
     <div className="space-y-6">
+      <DeviceModal
+        isOpen={deviceModalOpen}
+        onClose={() => setDeviceModalOpen(false)}
+        applications={applications ?? []}
+      />
+
       {tokenDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 space-y-3">
@@ -179,7 +189,17 @@ export default function Devices() {
             Gerencie dispositivos e o acesso remoto à interface web (túnel na nuvem)
           </p>
         </div>
-        <button type="button" className="btn btn-primary" disabled title="Em breve">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!canCreateDevice}
+          title={
+            canCreateDevice
+              ? 'Cadastrar novo device'
+              : 'Crie uma Application antes de adicionar devices'
+          }
+          onClick={() => setDeviceModalOpen(true)}
+        >
           <Plus className="w-4 h-4" />
           Novo Device
         </button>
@@ -232,6 +252,12 @@ export default function Devices() {
               ? 'Nenhum device encontrado'
               : 'Nenhum device cadastrado'}
           </h3>
+          {!searchTerm && applicationFilter === 'all' && canCreateDevice && (
+            <button type="button" className="btn btn-primary mt-4" onClick={() => setDeviceModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Novo Device
+            </button>
+          )}
         </div>
       ) : (
         <div className="card overflow-hidden">

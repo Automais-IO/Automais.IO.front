@@ -11,6 +11,20 @@ export const useDevices = () => {
   })
 }
 
+export const useCreateDevice = () => {
+  const queryClient = useQueryClient()
+  const tenantId = getTenantId()
+  return useMutation({
+    mutationFn: (payload) => {
+      if (!tenantId) throw new Error('Tenant não encontrado. Faça login novamente.')
+      return devicesApi.create(tenantId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices', tenantId] })
+    },
+  })
+}
+
 export const useEnableWebDevice = () => {
   const queryClient = useQueryClient()
   const tenantId = getTenantId()
