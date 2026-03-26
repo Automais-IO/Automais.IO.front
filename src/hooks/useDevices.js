@@ -57,3 +57,14 @@ export const useDisableWebDevice = () => {
     },
   })
 }
+
+export const useDeleteDevice = () => {
+  const queryClient = useQueryClient()
+  const tenantId = getTenantId()
+  return useMutation({
+    mutationFn: (id) => devicesApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices', tenantId] })
+    },
+  })
+}

@@ -7,6 +7,9 @@ export const devicesApi = {
   create: (tenantId, payload) =>
     api.post(`/tenants/${tenantId}/devices`, payload).then((r) => r.data),
 
+  remove: (id) =>
+    api.delete(`/devices/${encodeURIComponent(id)}`).then((r) => r.data),
+
   enableWebDevice: (devEui) =>
     api.post(`/devices/${encodeURIComponent(devEui)}/web-device/enable`).then((r) => r.data),
 

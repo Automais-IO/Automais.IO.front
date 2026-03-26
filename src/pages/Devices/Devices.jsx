@@ -8,6 +8,7 @@ import {
   KeyRound,
   Power,
   RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -15,6 +16,7 @@ import { Link } from 'react-router-dom'
 import { useApplications } from '../../hooks/useApplications'
 import {
   useDevices,
+  useDeleteDevice,
   useDisableWebDevice,
   useEnableWebDevice,
   useRegenerateWebDeviceToken,
@@ -60,6 +62,7 @@ export default function Devices() {
   const enableWd = useEnableWebDevice()
   const regenWd = useRegenerateWebDeviceToken()
   const disableWd = useDisableWebDevice()
+  const deleteDevice = useDeleteDevice()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [applicationFilter, setApplicationFilter] = useState('all')
@@ -118,6 +121,22 @@ export default function Devices() {
       await refetch()
     } catch (e) {
       alert(e.message || 'Falha ao desabilitar')
+    }
+  }
+
+  const runDelete = async (device) => {
+    const id = device?.id
+    if (!id) {
+      alert('Device inválido para exclusão.')
+      return
+    }
+    const devLabel = device?.name || device?.devEui || id
+    if (!window.confirm(`Excluir o device "${devLabel}"? Esta ação não pode ser desfeita.`)) return
+    try {
+      await deleteDevice.mutateAsync(id)
+      await refetch()
+    } catch (e) {
+      alert(e.message || 'Falha ao excluir device')
     }
   }
 
@@ -360,6 +379,15 @@ export default function Devices() {
                                 <Power className="w-3 h-3 mr-1" />
                                 Desligar
                               </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline text-red-700 border-red-200"
+                                disabled={deleteDevice.isPending}
+                                onClick={() => runDelete(device)}
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Excluir
+                              </button>
                               <Link
                                 to={`/devices/${encodeURIComponent(devEui)}/web-ui/`}
                                 className="btn btn-sm btn-primary inline-flex items-center"
@@ -368,6 +396,17 @@ export default function Devices() {
                                 Abrir UI
                               </Link>
                             </>
+                          )}
+                          {!wdOn && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline text-red-700 border-red-200"
+                              disabled={deleteDevice.isPending}
+                              onClick={() => runDelete(device)}
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Excluir
+                            </button>
                           )}
                         </div>
                       </td>
