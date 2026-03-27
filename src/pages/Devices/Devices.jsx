@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { openDeviceWebUiWindow } from '../../utils/openDeviceWebUiWindow'
 import { useApplications } from '../../hooks/useApplications'
 import {
   useDevices,
@@ -388,13 +388,20 @@ export default function Devices() {
                                 <Trash2 className="w-3 h-3 mr-1" />
                                 Excluir
                               </button>
-                              <Link
-                                to={`/devices/${encodeURIComponent(devEui)}/web-ui/`}
+                              <button
+                                type="button"
                                 className="btn btn-sm btn-primary inline-flex items-center"
+                                onClick={() => {
+                                  if (!openDeviceWebUiWindow(devEui)) {
+                                    window.alert(
+                                      'Não foi possível abrir a janela da UI. Permita pop-ups para este site e tente de novo.'
+                                    )
+                                  }
+                                }}
                               >
                                 <ExternalLink className="w-3 h-3 mr-1" />
                                 Abrir UI
-                              </Link>
+                              </button>
                             </>
                           )}
                           {!wdOn && (

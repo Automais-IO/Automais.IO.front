@@ -1,10 +1,14 @@
-import { useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, X } from 'lucide-react'
 import { getDeviceWebUiUrl } from '../../config/api'
 
 export default function DeviceWebUi() {
   const { deviceId, '*': splat } = useParams()
+  const navigate = useNavigate()
+  const [isPopup] = useState(
+    () => typeof window !== 'undefined' && Boolean(window.opener)
+  )
 
   const iframeSrc = useMemo(() => {
     if (!deviceId) return null
@@ -15,24 +19,68 @@ export default function DeviceWebUi() {
     }
   }, [deviceId, splat])
 
+  const handleClose = () => {
+    if (window.opener) {
+      window.close()
+      return
+    }
+    navigate('/devices', { replace: true })
+  }
+
+  const popupShell = 'fixed inset-0 z-[100] bg-gray-100 overflow-hidden flex flex-col'
+
   if (!deviceId) {
     return (
-      <div className="p-6">
+      <div className={isPopup ? `${popupShell} items-center justify-center p-6` : 'p-6'}>
         <p className="text-gray-700">Dispositivo inválido.</p>
-        <Link to="/devices" className="text-primary-600 text-sm mt-2 inline-block">
-          Voltar para Devices
-        </Link>
+        {isPopup ? (
+          <button type="button" className="btn btn-ghost btn-sm mt-4 text-gray-600" onClick={handleClose}>
+            Fechar
+          </button>
+        ) : (
+          <Link to="/devices" className="text-primary-600 text-sm mt-2 inline-block">
+            Voltar para Devices
+          </Link>
+        )}
       </div>
     )
   }
 
   if (!iframeSrc) {
     return (
-      <div className="p-6">
+      <div className={isPopup ? `${popupShell} items-center justify-center p-6` : 'p-6'}>
         <p className="text-red-600">Não foi possível abrir a interface (sessão expirada?).</p>
-        <Link to="/devices" className="text-primary-600 text-sm mt-2 inline-block">
-          Voltar para Devices
-        </Link>
+        {isPopup ? (
+          <button type="button" className="btn btn-ghost btn-sm mt-4 text-gray-600" onClick={handleClose}>
+            Fechar
+          </button>
+        ) : (
+          <Link to="/devices" className="text-primary-600 text-sm mt-2 inline-block">
+            Voltar para Devices
+          </Link>
+        )}
+      </div>
+    )
+  }
+
+  if (isPopup) {
+    return (
+      <div className={popupShell}>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="absolute top-2 right-2 z-10 p-2 rounded-md bg-black/50 hover:bg-black/70 text-gray-300 hover:text-white transition-colors"
+          title="Fechar"
+          aria-label="Fechar janela da UI do device"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <iframe
+          title="Interface web do device"
+          src={iframeSrc}
+          className="flex-1 w-full min-h-0 border-0"
+          sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
+        />
       </div>
     )
   }
