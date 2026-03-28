@@ -9,7 +9,7 @@ export const useDevices = () => {
     queryFn: () => devicesApi.getByTenant(tenantId),
     enabled: !!tenantId,
     refetchInterval: () =>
-      typeof document !== 'undefined' && document.hidden ? false : 5000,
+      typeof document !== 'undefined' && document.hidden ? false : 60000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   })
@@ -67,6 +67,17 @@ export const useDeleteDevice = () => {
   const tenantId = getTenantId()
   return useMutation({
     mutationFn: (id) => devicesApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices', tenantId] })
+    },
+  })
+}
+
+export const useRequestWebDeviceSync = () => {
+  const queryClient = useQueryClient()
+  const tenantId = getTenantId()
+  return useMutation({
+    mutationFn: (devEui) => devicesApi.requestWebDeviceSync(devEui),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices', tenantId] })
     },

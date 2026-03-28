@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Trash2,
   Radio,
+  Upload,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -21,6 +22,7 @@ import {
   useDisableWebDevice,
   useEnableWebDevice,
   useRegenerateWebDeviceToken,
+  useRequestWebDeviceSync,
 } from '../../hooks/useDevices'
 import DeviceModal from '../../components/Modal/DeviceModal'
 
@@ -34,6 +36,8 @@ const kindLabels = {
 }
 
 const statusLabels = {
+  0: { label: '—', color: 'badge-gray' },
+  NeverSeen: { label: '—', color: 'badge-gray' },
   1: { label: 'Provisionamento', color: 'badge-gray' },
   2: { label: 'Ativo', color: 'badge-success' },
   3: { label: 'Atenção', color: 'badge-warning' },
@@ -52,53 +56,125 @@ function kindLabel(k) {
 
 function statusBadge(status) {
   const s = statusLabels[status] ?? { label: String(status ?? '—'), color: 'badge-gray' }
-  return (
-    <span className={clsx('badge', s.color)}>{s.label}</span>
-  )
+  return <span className={clsx('badge', s.color)}>{s.label}</span>
 }
 
-/** Resumo da “nuvem UI” com os campos que a API expõe hoje (sem túnel em tempo real no tenant). */
-function cloudUiSummary(device) {
-  const wdOn = device.webDeviceEnabled ?? device.web_device_enabled
-  const wdTok = device.webDeviceTokenConfigured ?? device.web_device_token_configured
-  const st = device.status
+function pick(device, camel, snake) {
+  if (device[camel] !== undefined && device[camel] !== null) return device[camel]
+  if (snake && device[snake] !== undefined && device[snake] !== null) return device[snake]
+  return device[camel] ?? (snake ? device[snake] : undefined)
+}
 
+function syncProgressParts(device) {
+  const dd = pick(device, 'webDeviceDownloadDone', 'web_device_download_done')
+  const dt = pick(device, 'webDeviceDownloadTotal', 'web_device_download_total')
+  if (dd != null && dt != null && dt > 0) return { cur: dd, total: dt, kind: 'files' }
+  const sc = pick(device, 'webDeviceSyncedFileCount', 'web_device_synced_file_count')
+  const tc = pick(device, 'webDeviceTotalFileCount', 'web_device_total_file_count')
+  if (sc != null && tc != null && tc > 0) return { cur: sc, total: tc, kind: 'manifest' }
+  return null
+}
+
+/** Estado exibido na coluna Nuvem (túnel + sync + telemetria do ESP, vinda da API + serviço webdevice). */
+function buildWebCloudUi(device) {
+  const wdOn = pick(device, 'webDeviceEnabled', 'web_device_enabled')
+  const wdTok = pick(device, 'webDeviceTokenConfigured', 'web_device_token_configured')
   if (!wdOn) {
     return {
-      badges: [{ label: 'Remota desligada', color: 'badge-gray' }],
-      hint: 'Ative para gerar token e abrir a interface via nuvem.',
+      badges: [{ label: 'Remota off', color: 'badge-gray' }],
+      detailLines: [],
+      hint: 'Ative a interface remota para gerar token e sincronizar arquivos com o servidor.',
     }
   }
   if (!wdTok) {
     return {
       badges: [{ label: 'Token pendente', color: 'badge-warning' }],
-      hint: 'Conclua a habilitação e configure o token no firmware.',
+      detailLines: [],
+      hint: 'Conclua a habilitação e configure o token no firmware (/device → Cloud).',
     }
   }
 
-  const isDevOffline = st === 4 || st === 'Offline'
-  const isProvisioning = st === 1 || st === 'Provisioning'
-  const badges = [{ label: 'Token OK', color: 'badge-success' }]
+  const tunnel = pick(device, 'webDeviceTunnelOnline', 'web_device_tunnel_online')
+  const syncSt = String(pick(device, 'webDeviceSyncStatus', 'web_device_sync_status') || '')
+  const st = syncSt.toLowerCase()
+  const telemJson = pick(device, 'webDeviceTelemetryJson', 'web_device_telemetry_json')
+  const telemAt = pick(device, 'webDeviceTelemetryReceivedAt', 'web_device_telemetry_received_at')
 
-  if (isDevOffline) {
-    badges.push({ label: 'Device offline', color: 'badge-gray' })
-    return {
-      badges,
-      hint: 'Sem tráfego recente no LoRaWAN; o túnel da UI na nuvem só funciona com o equipamento ligado e em rede.',
-    }
-  }
-  if (isProvisioning) {
-    badges.push({ label: 'Provisionando', color: 'badge-warning' })
-    return {
-      badges,
-      hint: 'Após ativo na rede, o device pode abrir o túnel.',
-    }
+  const badges = []
+  if (tunnel === true) badges.push({ label: 'Online', color: 'badge-success' })
+  else if (tunnel === false) badges.push({ label: 'Offline', color: 'badge-gray' })
+  else badges.push({ label: 'Estado indisponível', color: 'badge-warning' })
+
+  if (tunnel === true) {
+    if (st === 'done') badges.push({ label: 'Sincronizado', color: 'badge-success' })
+    else if (st === 'syncing') badges.push({ label: 'Sincronizando', color: 'badge-info' })
+    else if (st === 'requesting') badges.push({ label: 'Manifesto…', color: 'badge-info' })
+    else if (st === 'error') badges.push({ label: 'Erro sync', color: 'badge-error' })
+    else if (syncSt) badges.push({ label: syncSt, color: 'badge-gray' })
   }
 
-  return {
-    badges,
-    hint: 'Com device ativo, use “Abrir UI”. Túnel e sync de arquivos em tempo real no servidor aparecem no Automais Manager.',
+  const detailLines = []
+  const parts = syncProgressParts(device)
+  if (parts) {
+    detailLines.push(
+      parts.kind === 'files'
+        ? `Arquivos: ${parts.cur}/${parts.total}`
+        : `Manifesto: ${parts.cur}/${parts.total}`
+    )
   }
+
+  let telem = null
+  try {
+    telem = telemJson ? JSON.parse(telemJson) : null
+  } catch {
+    telem = null
+  }
+  if (telem && typeof telem === 'object') {
+    if (telem.free_heap != null)
+      detailLines.push(`RAM livre: ~${Math.round(Number(telem.free_heap) / 1024)} KiB`)
+    if (telem.heap_frag_pct != null) detailLines.push(`Frag. heap: ${telem.heap_frag_pct}%`)
+    if (telem.littlefs_used != null && telem.littlefs_total != null) {
+      detailLines.push(
+        `LittleFS: ${Math.round(Number(telem.littlefs_used) / 1024)} / ${Math.round(Number(telem.littlefs_total) / 1024)} KiB`
+      )
+    }
+    if (telem.wifi_rssi != null) detailLines.push(`RSSI Wi‑Fi: ${telem.wifi_rssi} dBm`)
+    if (telem.lora_rssi != null) detailLines.push(`RSSI LoRa: ${telem.lora_rssi} dBm`)
+  }
+  if (telemAt) {
+    detailLines.push(
+      `Telemetria: ${new Date(telemAt).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`
+    )
+  }
+
+  let hint = ''
+  if (tunnel === true && st === 'done') {
+    hint = 'Túnel ativo e cópia no servidor pronta — você pode abrir a UI.'
+  } else if (tunnel === true) {
+    hint = 'Aguarde o fim da sincronização de arquivos para abrir a interface web.'
+  } else if (tunnel === false) {
+    hint = 'Equipamento sem túnel ativo; verifique alimentação, Wi‑Fi e token.'
+  } else {
+    hint = 'Não foi possível consultar o serviço WebDevice (rede interna / Python).'
+  }
+
+  return { badges, detailLines, hint }
+}
+
+function canOpenWebUi(device) {
+  const wdOn = pick(device, 'webDeviceEnabled', 'web_device_enabled')
+  const wdTok = pick(device, 'webDeviceTokenConfigured', 'web_device_token_configured')
+  const uiReady = pick(device, 'webDeviceUiReady', 'web_device_ui_ready')
+  const tunnel = pick(device, 'webDeviceTunnelOnline', 'web_device_tunnel_online')
+  const syncSt = String(pick(device, 'webDeviceSyncStatus', 'web_device_sync_status') || '').toLowerCase()
+  if (!wdOn || !wdTok) return false
+  if (uiReady === true) return true
+  return tunnel === true && syncSt === 'done'
 }
 
 const iconAct =
@@ -111,6 +187,7 @@ export default function Devices() {
   const regenWd = useRegenerateWebDeviceToken()
   const disableWd = useDisableWebDevice()
   const deleteDevice = useDeleteDevice()
+  const requestSync = useRequestWebDeviceSync()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [applicationFilter, setApplicationFilter] = useState('all')
@@ -169,6 +246,20 @@ export default function Devices() {
       await refetch()
     } catch (e) {
       alert(e.message || 'Falha ao desabilitar')
+    }
+  }
+
+  const runRequestSync = async (devEui) => {
+    try {
+      await requestSync.mutateAsync(devEui)
+      await refetch()
+    } catch (e) {
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.Message ||
+        e.message ||
+        'Não foi possível solicitar sincronização (agente offline?)'
+      alert(msg)
     }
   }
 
@@ -254,15 +345,15 @@ export default function Devices() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Devices</h1>
             <p className="mt-1 text-sm text-gray-600">
-              Gerencie dispositivos e o acesso remoto à interface web (túnel na nuvem)
+              Dispositivos, túnel na nuvem e sincronização de arquivos (mesma fonte que o Automais Manager)
             </p>
           </div>
           <div
             className="flex items-center gap-2 text-xs text-gray-500"
-            title="A lista é atualizada automaticamente a cada 5 s quando esta aba está visível"
+            title="Lista e estado do túnel/telemetria: atualização a cada 60 s com a aba visível (menos carga no ESP)"
           >
             <Radio className="w-4 h-4 text-green-600 shrink-0" aria-hidden />
-            <span>Atualização 5 s</span>
+            <span>Atualização 60 s</span>
             {isFetching && !isLoading && (
               <span className="flex items-center gap-1 text-blue-600">
                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
@@ -357,10 +448,10 @@ export default function Devices() {
                     Tipo
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Status
+                    Plataforma
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Interface na nuvem
+                    Nuvem (túnel)
                   </th>
                   <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Ações
@@ -374,8 +465,10 @@ export default function Devices() {
                   const wdDisabled = !String(devEui).trim()
                   const wdOn = device.webDeviceEnabled ?? device.web_device_enabled
                   const wdTok = device.webDeviceTokenConfigured ?? device.web_device_token_configured
-                  const cloud = cloudUiSummary(device)
-                  const canOpenUi = wdOn && wdTok
+                  const cloud = buildWebCloudUi(device)
+                  const canOpenUi = canOpenWebUi(device)
+                  const tunnelOn = pick(device, 'webDeviceTunnelOnline', 'web_device_tunnel_online') === true
+                  const canForceSync = wdOn && wdTok && tunnelOn
                   return (
                     <tr key={device.id} className="hover:bg-gray-50">
                       <td className="py-4 px-4">
@@ -407,6 +500,13 @@ export default function Devices() {
                             </span>
                           ))}
                         </div>
+                        {cloud.detailLines.length > 0 && (
+                          <ul className="text-[11px] text-gray-600 mt-1.5 space-y-0.5 leading-snug list-disc pl-3.5">
+                            {cloud.detailLines.map((line) => (
+                              <li key={line}>{line}</li>
+                            ))}
+                          </ul>
+                        )}
                         {cloud.hint && (
                           <p className="text-[11px] text-gray-500 mt-1.5 leading-snug">{cloud.hint}</p>
                         )}
@@ -438,6 +538,19 @@ export default function Devices() {
                               </button>
                               <button
                                 type="button"
+                                className={clsx(iconAct, 'hover:bg-violet-50')}
+                                disabled={!canForceSync || requestSync.isPending || wdDisabled}
+                                title={
+                                  canForceSync
+                                    ? 'Forçar nova sincronização de arquivos /data'
+                                    : 'Só com túnel online'
+                                }
+                                onClick={() => runRequestSync(devEui)}
+                              >
+                                <Upload className="w-4 h-4 text-violet-600" />
+                              </button>
+                              <button
+                                type="button"
                                 className={clsx(iconAct, 'hover:bg-amber-50')}
                                 disabled={disableWd.isPending || wdDisabled}
                                 title="Desligar interface remota na nuvem"
@@ -451,8 +564,8 @@ export default function Devices() {
                                 disabled={!canOpenUi}
                                 title={
                                   canOpenUi
-                                    ? 'Abrir UI do device em nova janela'
-                                    : 'Configure o token no firmware antes de abrir a UI'
+                                    ? 'Abrir UI do device (túnel + sync concluído)'
+                                    : 'Disponível só com equipamento online e sincronizado'
                                 }
                                 onClick={() => {
                                   if (!openDeviceWebUiWindow(devEui)) {

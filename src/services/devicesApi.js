@@ -18,4 +18,7 @@ export const devicesApi = {
 
   disableWebDevice: (devEui) =>
     api.post(`/devices/${encodeURIComponent(devEui)}/web-device/disable`).then((r) => r.data),
+
+  requestWebDeviceSync: (devEui) =>
+    api.post(`/devices/${encodeURIComponent(devEui)}/web-device/request-sync`).then((r) => r.data),
 }
