@@ -8,6 +8,10 @@ export const useDevices = () => {
     queryKey: ['devices', tenantId],
     queryFn: () => devicesApi.getByTenant(tenantId),
     enabled: !!tenantId,
+    refetchInterval: () =>
+      typeof document !== 'undefined' && document.hidden ? false : 5000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   })
 }
 

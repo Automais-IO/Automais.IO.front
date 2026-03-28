@@ -9,6 +9,7 @@ import {
   Power,
   RefreshCw,
   Trash2,
+  Radio,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -56,8 +57,55 @@ function statusBadge(status) {
   )
 }
 
+/** Resumo da “nuvem UI” com os campos que a API expõe hoje (sem túnel em tempo real no tenant). */
+function cloudUiSummary(device) {
+  const wdOn = device.webDeviceEnabled ?? device.web_device_enabled
+  const wdTok = device.webDeviceTokenConfigured ?? device.web_device_token_configured
+  const st = device.status
+
+  if (!wdOn) {
+    return {
+      badges: [{ label: 'Remota desligada', color: 'badge-gray' }],
+      hint: 'Ative para gerar token e abrir a interface via nuvem.',
+    }
+  }
+  if (!wdTok) {
+    return {
+      badges: [{ label: 'Token pendente', color: 'badge-warning' }],
+      hint: 'Conclua a habilitação e configure o token no firmware.',
+    }
+  }
+
+  const isDevOffline = st === 4 || st === 'Offline'
+  const isProvisioning = st === 1 || st === 'Provisioning'
+  const badges = [{ label: 'Token OK', color: 'badge-success' }]
+
+  if (isDevOffline) {
+    badges.push({ label: 'Device offline', color: 'badge-gray' })
+    return {
+      badges,
+      hint: 'Sem tráfego recente no LoRaWAN; o túnel da UI na nuvem só funciona com o equipamento ligado e em rede.',
+    }
+  }
+  if (isProvisioning) {
+    badges.push({ label: 'Provisionando', color: 'badge-warning' })
+    return {
+      badges,
+      hint: 'Após ativo na rede, o device pode abrir o túnel.',
+    }
+  }
+
+  return {
+    badges,
+    hint: 'Com device ativo, use “Abrir UI”. Túnel e sync de arquivos em tempo real no servidor aparecem no Automais Manager.',
+  }
+}
+
+const iconAct =
+  'p-2 rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed'
+
 export default function Devices() {
-  const { data: devices, isLoading, error, refetch } = useDevices()
+  const { data: devices, isLoading, error, refetch, isFetching } = useDevices()
   const { data: applications } = useApplications()
   const enableWd = useEnableWebDevice()
   const regenWd = useRegenerateWebDeviceToken()
@@ -201,12 +249,27 @@ export default function Devices() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Devices</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Gerencie dispositivos e o acesso remoto à interface web (túnel na nuvem)
-          </p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Devices</h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Gerencie dispositivos e o acesso remoto à interface web (túnel na nuvem)
+            </p>
+          </div>
+          <div
+            className="flex items-center gap-2 text-xs text-gray-500"
+            title="A lista é atualizada automaticamente a cada 5 s quando esta aba está visível"
+          >
+            <Radio className="w-4 h-4 text-green-600 shrink-0" aria-hidden />
+            <span>Atualização 5 s</span>
+            {isFetching && !isLoading && (
+              <span className="flex items-center gap-1 text-blue-600">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                Atualizando…
+              </span>
+            )}
+          </div>
         </div>
         <button
           type="button"
@@ -297,7 +360,7 @@ export default function Devices() {
                     Status
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Nuvem UI
+                    Interface na nuvem
                   </th>
                   <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Ações
@@ -311,6 +374,8 @@ export default function Devices() {
                   const wdDisabled = !String(devEui).trim()
                   const wdOn = device.webDeviceEnabled ?? device.web_device_enabled
                   const wdTok = device.webDeviceTokenConfigured ?? device.web_device_token_configured
+                  const cloud = cloudUiSummary(device)
+                  const canOpenUi = wdOn && wdTok
                   return (
                     <tr key={device.id} className="hover:bg-gray-50">
                       <td className="py-4 px-4">
@@ -334,63 +399,61 @@ export default function Devices() {
                         {kindLabel(device.kind)}
                       </td>
                       <td className="py-4 px-4">{statusBadge(device.status)}</td>
-                      <td className="py-4 px-4">
-                        <div className="text-xs space-y-1">
-                          <span className={clsx('badge', wdOn ? 'badge-success' : 'badge-gray')}>
-                            {wdOn ? 'Ativo' : 'Off'}
-                          </span>
-                          {wdOn && (
-                            <div className="text-gray-500">
-                              Token: {wdTok ? 'configurado' : 'pendente'}
-                            </div>
-                          )}
+                      <td className="py-3 px-4 align-top max-w-xs">
+                        <div className="flex flex-wrap gap-1">
+                          {cloud.badges.map((b) => (
+                            <span key={b.label} className={clsx('badge', b.color)}>
+                              {b.label}
+                            </span>
+                          ))}
                         </div>
+                        {cloud.hint && (
+                          <p className="text-[11px] text-gray-500 mt-1.5 leading-snug">{cloud.hint}</p>
+                        )}
                       </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex flex-wrap gap-1 justify-end">
+                      <td className="py-3 px-4 text-right align-top">
+                        <div className="flex flex-wrap gap-0.5 justify-end">
                           {!wdOn ? (
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline"
+                              className={clsx(iconAct, 'hover:bg-green-50')}
                               disabled={enableWd.isPending || wdDisabled}
-                              title={wdDisabled ? 'Device sem DevEUI' : undefined}
+                              title={
+                                wdDisabled ? 'Device sem DevEUI' : 'Habilitar interface na nuvem'
+                              }
                               onClick={() => runEnable(devEui)}
                             >
-                              <KeyRound className="w-3 h-3 mr-1" />
-                              Habilitar
+                              <KeyRound className="w-4 h-4 text-green-600" />
                             </button>
                           ) : (
                             <>
                               <button
                                 type="button"
-                                className="btn btn-sm btn-outline"
+                                className={clsx(iconAct, 'hover:bg-gray-100')}
                                 disabled={regenWd.isPending || wdDisabled}
+                                title="Gerar novo token (invalida o firmware atual)"
                                 onClick={() => runRegen(devEui)}
                               >
-                                <RefreshCw className="w-3 h-3 mr-1" />
-                                Novo token
+                                <RefreshCw className="w-4 h-4 text-gray-600" />
                               </button>
                               <button
                                 type="button"
-                                className="btn btn-sm btn-outline text-red-700 border-red-200"
+                                className={clsx(iconAct, 'hover:bg-amber-50')}
                                 disabled={disableWd.isPending || wdDisabled}
+                                title="Desligar interface remota na nuvem"
                                 onClick={() => runDisable(devEui)}
                               >
-                                <Power className="w-3 h-3 mr-1" />
-                                Desligar
+                                <Power className="w-4 h-4 text-amber-700" />
                               </button>
                               <button
                                 type="button"
-                                className="btn btn-sm btn-outline text-red-700 border-red-200"
-                                disabled={deleteDevice.isPending}
-                                onClick={() => runDelete(device)}
-                              >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                Excluir
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-primary inline-flex items-center"
+                                className={clsx(iconAct, 'hover:bg-sky-50')}
+                                disabled={!canOpenUi}
+                                title={
+                                  canOpenUi
+                                    ? 'Abrir UI do device em nova janela'
+                                    : 'Configure o token no firmware antes de abrir a UI'
+                                }
                                 onClick={() => {
                                   if (!openDeviceWebUiWindow(devEui)) {
                                     window.alert(
@@ -399,22 +462,19 @@ export default function Devices() {
                                   }
                                 }}
                               >
-                                <ExternalLink className="w-3 h-3 mr-1" />
-                                Abrir UI
+                                <ExternalLink className="w-4 h-4 text-sky-600" />
                               </button>
                             </>
                           )}
-                          {!wdOn && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline text-red-700 border-red-200"
-                              disabled={deleteDevice.isPending}
-                              onClick={() => runDelete(device)}
-                            >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Excluir
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className={clsx(iconAct, 'hover:bg-red-50')}
+                            disabled={deleteDevice.isPending}
+                            title="Excluir device"
+                            onClick={() => runDelete(device)}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
                         </div>
                       </td>
                     </tr>
