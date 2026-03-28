@@ -75,22 +75,32 @@ function syncProgressParts(device) {
   return null
 }
 
-/** Estado exibido na coluna Nuvem (túnel + sync + telemetria do ESP, vinda da API + serviço webdevice). */
+/** Estado exibido na coluna Nuvem (túnel + sync + telemetria). Detalhes longos ficam em title (tooltip), não em parágrafo. */
 function buildWebCloudUi(device) {
   const wdOn = pick(device, 'webDeviceEnabled', 'web_device_enabled')
   const wdTok = pick(device, 'webDeviceTokenConfigured', 'web_device_token_configured')
   if (!wdOn) {
     return {
-      badges: [{ label: 'Remota off', color: 'badge-gray' }],
+      badges: [
+        {
+          label: 'Remota off',
+          color: 'badge-gray',
+          title: 'Ative a interface remota para gerar token e sincronizar arquivos com o servidor.',
+        },
+      ],
       detailLines: [],
-      hint: 'Ative a interface remota para gerar token e sincronizar arquivos com o servidor.',
     }
   }
   if (!wdTok) {
     return {
-      badges: [{ label: 'Token pendente', color: 'badge-warning' }],
+      badges: [
+        {
+          label: 'Token pendente',
+          color: 'badge-warning',
+          title: 'Conclua a habilitação e configure o token no firmware (/device → Cloud).',
+        },
+      ],
       detailLines: [],
-      hint: 'Conclua a habilitação e configure o token no firmware (/device → Cloud).',
     }
   }
 
@@ -101,16 +111,42 @@ function buildWebCloudUi(device) {
   const telemAt = pick(device, 'webDeviceTelemetryReceivedAt', 'web_device_telemetry_received_at')
 
   const badges = []
-  if (tunnel === true) badges.push({ label: 'Online', color: 'badge-success' })
-  else if (tunnel === false) badges.push({ label: 'Offline', color: 'badge-gray' })
-  else badges.push({ label: 'Estado indisponível', color: 'badge-warning' })
+  if (tunnel === true) {
+    badges.push({ label: 'Online', color: 'badge-success' })
+  } else if (tunnel === false) {
+    badges.push({
+      label: 'Offline',
+      color: 'badge-gray',
+      title: 'Equipamento sem túnel ativo. Verifique alimentação, Wi‑Fi e token.',
+    })
+  } else {
+    badges.push({
+      label: 'Estado indisponível',
+      color: 'badge-warning',
+      title: 'Não foi possível consultar o serviço WebDevice (rede interna / Python).',
+    })
+  }
 
   if (tunnel === true) {
-    if (st === 'done') badges.push({ label: 'Sincronizado', color: 'badge-success' })
-    else if (st === 'syncing') badges.push({ label: 'Sincronizando', color: 'badge-info' })
-    else if (st === 'requesting') badges.push({ label: 'Manifesto…', color: 'badge-info' })
-    else if (st === 'error') badges.push({ label: 'Erro sync', color: 'badge-error' })
-    else if (syncSt) badges.push({ label: syncSt, color: 'badge-gray' })
+    if (st === 'done') {
+      badges.push({ label: 'Sincronizado', color: 'badge-success' })
+    } else if (st === 'error') {
+      badges.push({
+        label: 'Erro sync',
+        color: 'badge-error',
+        title: 'Falha ao sincronizar arquivos com o servidor. Veja os logs do webdevice.',
+      })
+    } else {
+      const syncingNow = st === 'syncing' || st === 'requesting'
+      badges.push({
+        key: 'no-sync',
+        label: 'No sync',
+        color: 'badge-warning',
+        title: syncingNow
+          ? 'Sincronização em andamento; a interface web só abre quando terminar.'
+          : 'Device ainda não sincronizou.',
+      })
+    }
   }
 
   const detailLines = []
@@ -152,18 +188,7 @@ function buildWebCloudUi(device) {
     )
   }
 
-  let hint = ''
-  if (tunnel === true && st === 'done') {
-    hint = 'Túnel ativo e cópia no servidor pronta — você pode abrir a UI.'
-  } else if (tunnel === true) {
-    hint = 'Aguarde o fim da sincronização de arquivos para abrir a interface web.'
-  } else if (tunnel === false) {
-    hint = 'Equipamento sem túnel ativo; verifique alimentação, Wi‑Fi e token.'
-  } else {
-    hint = 'Não foi possível consultar o serviço WebDevice (rede interna / Python).'
-  }
-
-  return { badges, detailLines, hint }
+  return { badges, detailLines }
 }
 
 function canOpenWebUi(device) {
@@ -495,7 +520,11 @@ export default function Devices() {
                       <td className="py-3 px-4 align-top max-w-xs">
                         <div className="flex flex-wrap gap-1">
                           {cloud.badges.map((b) => (
-                            <span key={b.label} className={clsx('badge', b.color)}>
+                            <span
+                              key={b.key ?? b.label}
+                              title={b.title || undefined}
+                              className={clsx('badge', b.color, b.title && 'cursor-help')}
+                            >
                               {b.label}
                             </span>
                           ))}
@@ -506,9 +535,6 @@ export default function Devices() {
                               <li key={line}>{line}</li>
                             ))}
                           </ul>
-                        )}
-                        {cloud.hint && (
-                          <p className="text-[11px] text-gray-500 mt-1.5 leading-snug">{cloud.hint}</p>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right align-top">
