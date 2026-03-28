@@ -1,10 +1,18 @@
+import { getDeviceWebUiUrl } from '../config/api'
+
 /**
  * Abre a UI web do device numa janela popup com o mínimo de cromo do browser.
- * O destino é /devices/:deviceId/web-ui/ (rota sem Layout do painel).
+ * Usa a URL direta da API (JWT na query) para o documento ser first-party em api.automais.io;
+ * assim o cookie HttpOnly da sessão da UI pode ser gravado (evita 401 em CSS/JS no iframe embutido).
  */
 export function openDeviceWebUiWindow(devEui) {
   const enc = encodeURIComponent(String(devEui).trim())
-  const url = `${window.location.origin}/devices/${enc}/web-ui/`
+  let url
+  try {
+    url = getDeviceWebUiUrl(devEui)
+  } catch {
+    return null
+  }
   const w = Math.min(1280, window.screen.availWidth - 80)
   const h = Math.min(800, window.screen.availHeight - 80)
   const left = Math.max(0, Math.round((window.screen.availWidth - w) / 2))
