@@ -1,6 +1,6 @@
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import AuthBrandHeader from '../../components/AuthBrandHeader'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { authApi } from '../../services/authApi'
@@ -52,7 +52,7 @@ export default function Login() {
   const [ssoPendingToken, setSsoPendingToken] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const isSsoFlow = !!ssoProvider && (!!ssoCode || !!ssoPendingToken)
+  const autoSsoAttemptedRef = useRef(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -68,6 +68,57 @@ export default function Login() {
       window.history.replaceState({}, '', '/login')
     }
   }, [])
+
+  useEffect(() => {
+    if (!ssoProvider || !ssoCode || !ssoState) return
+    if (autoSsoAttemptedRef.current) return
+
+    autoSsoAttemptedRef.current = true
+    let cancelled = false
+
+    const runAutoSso = async () => {
+      setError('')
+      setIsLoading(true)
+      try {
+        const result = await completeSso(ssoProvider, {
+          code: ssoCode,
+          state: ssoState,
+        })
+        if (cancelled) return
+
+        if (result.requiresTenantSelection) {
+          const options = result.tenants || []
+          setTenantOptions(options)
+          setSelectedTenantId((current) => current || options[0]?.tenantId || options[0]?.TenantId || '')
+          if (result.ssoPendingToken) {
+            setSsoPendingToken(result.ssoPendingToken)
+            setSsoCode('')
+            setSsoState('')
+          }
+          return
+        }
+
+        if (result.success) {
+          navigate(result.mustChangePassword ? '/definir-senha' : '/')
+        } else {
+          setError(result.error || 'Erro ao concluir SSO')
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Erro ao concluir autenticação SSO.')
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    runAutoSso()
+    return () => {
+      cancelled = true
+    }
+  }, [ssoProvider, ssoCode, ssoState, completeSso, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -144,78 +195,69 @@ export default function Login() {
               </div>
             )}
 
-            {!isSsoFlow ? (
-              <>
-                {/* Email */}
-                <div>
-                  <label htmlFor="email" className="label">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value)
-                        setError('')
-                        setTenantOptions([])
-                        setSelectedTenantId('')
-                        setSsoProvider('')
-                        setSsoCode('')
-                        setSsoState('')
-                        setSsoPendingToken('')
-                      }}
-                      className="input pl-10"
-                      placeholder="seu@email.com"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div>
-                  <label htmlFor="password" className="label">
-                    Senha
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value)
-                        setError('')
-                        setTenantOptions([])
-                        setSelectedTenantId('')
-                        setSsoProvider('')
-                        setSsoCode('')
-                        setSsoState('')
-                        setSsoPendingToken('')
-                      }}
-                      className="input pl-10"
-                      placeholder="••••••••"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                Autenticação {ssoProvider === 'microsoft' ? 'Microsoft' : 'Google'} validada. 
-                {tenantOptions.length > 0
-                  ? ' Selecione o tenant e clique em "Acessar tenant".'
-                  : ' Clique em "Concluir com SSO" para finalizar o acesso.'}
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="label">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('')
+                    setTenantOptions([])
+                    setSelectedTenantId('')
+                    autoSsoAttemptedRef.current = false
+                    setSsoProvider('')
+                    setSsoCode('')
+                    setSsoState('')
+                    setSsoPendingToken('')
+                  }}
+                  className="input pl-10"
+                  placeholder="seu@email.com"
+                  disabled={isLoading}
+                />
               </div>
-            )}
+            </div>
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="label">
+                Senha
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setError('')
+                    setTenantOptions([])
+                    setSelectedTenantId('')
+                    autoSsoAttemptedRef.current = false
+                    setSsoProvider('')
+                    setSsoCode('')
+                    setSsoState('')
+                    setSsoPendingToken('')
+                  }}
+                  className="input pl-10"
+                  placeholder="••••••••"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
 
             {/* Seleção de tenant (apenas quando usuário tem múltiplos acessos) */}
             {tenantOptions.length > 0 && (
@@ -249,7 +291,7 @@ export default function Login() {
             )}
 
             {/* Remember me & Forgot password */}
-            {!isSsoFlow && (
+            {!ssoProvider && !ssoPendingToken && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
