@@ -57,12 +57,13 @@ export default function Login() {
     const params = new URLSearchParams(window.location.search)
     const code = params.get('code') || ''
     const state = params.get('state') || ''
-    const provider = params.get('ssoProvider') || ''
+    const provider = sessionStorage.getItem('ssoProviderPending') || ''
 
     if (code && state && provider) {
       setSsoCode(code)
       setSsoState(state)
       setSsoProvider(provider)
+      sessionStorage.removeItem('ssoProviderPending')
       window.history.replaceState({}, '', '/login')
     }
   }, [])
@@ -113,12 +114,14 @@ export default function Login() {
     setError('')
     setIsLoading(true)
     try {
-      const redirectUri = `${window.location.origin}/login?ssoProvider=${provider}`
+      const redirectUri = `${window.location.origin}/login`
+      sessionStorage.setItem('ssoProviderPending', provider)
       const data = await authApi.startSso(provider, redirectUri)
       const url = data.authorizationUrl || data.AuthorizationUrl
       if (!url) throw new Error('URL de autorização SSO inválida.')
       window.location.assign(url)
     } catch (err) {
+      sessionStorage.removeItem('ssoProviderPending')
       setError(err.message || 'Erro ao iniciar login SSO.')
       setIsLoading(false)
     }
