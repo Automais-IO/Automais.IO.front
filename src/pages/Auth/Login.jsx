@@ -1,18 +1,37 @@
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import AuthBrandHeader from '../../components/AuthBrandHeader'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { authApi } from '../../services/authApi'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, completeSso } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tenantOptions, setTenantOptions] = useState([])
   const [selectedTenantId, setSelectedTenantId] = useState('')
+  const [ssoProvider, setSsoProvider] = useState('')
+  const [ssoCode, setSsoCode] = useState('')
+  const [ssoState, setSsoState] = useState('')
+  const [ssoPendingToken, setSsoPendingToken] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code') || ''
+    const state = params.get('state') || ''
+    const provider = params.get('ssoProvider') || ''
+
+    if (code && state && provider) {
+      setSsoCode(code)
+      setSsoState(state)
+      setSsoProvider(provider)
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -20,12 +39,27 @@ export default function Login() {
     setIsLoading(true)
     
     try {
-      const result = await login(email, password, selectedTenantId || undefined)
+      let result
+      if (ssoProvider && (ssoCode || ssoPendingToken)) {
+        result = await completeSso(ssoProvider, {
+          code: ssoCode || undefined,
+          state: ssoState || undefined,
+          pendingToken: ssoPendingToken || undefined,
+          tenantId: selectedTenantId || undefined,
+        })
+      } else {
+        result = await login(email, password, selectedTenantId || undefined)
+      }
 
       if (result.requiresTenantSelection) {
         const options = result.tenants || []
         setTenantOptions(options)
         setSelectedTenantId((current) => current || options[0]?.tenantId || options[0]?.TenantId || '')
+        if (result.ssoPendingToken) {
+          setSsoPendingToken(result.ssoPendingToken)
+          setSsoCode('')
+          setSsoState('')
+        }
         return
       }
       
@@ -37,6 +71,21 @@ export default function Login() {
     } catch (err) {
       setError(err.message || 'Erro ao fazer login. Tente novamente.')
     } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const startSsoLogin = async (provider) => {
+    setError('')
+    setIsLoading(true)
+    try {
+      const redirectUri = `${window.location.origin}/login?ssoProvider=${provider}`
+      const data = await authApi.startSso(provider, redirectUri)
+      const url = data.authorizationUrl || data.AuthorizationUrl
+      if (!url) throw new Error('URL de autorização SSO inválida.')
+      window.location.assign(url)
+    } catch (err) {
+      setError(err.message || 'Erro ao iniciar login SSO.')
       setIsLoading(false)
     }
   }
@@ -76,6 +125,10 @@ export default function Login() {
                     setError('')
                     setTenantOptions([])
                     setSelectedTenantId('')
+                    setSsoProvider('')
+                    setSsoCode('')
+                    setSsoState('')
+                    setSsoPendingToken('')
                   }}
                   className="input pl-10"
                   placeholder="seu@email.com"
@@ -103,6 +156,10 @@ export default function Login() {
                     setError('')
                     setTenantOptions([])
                     setSelectedTenantId('')
+                    setSsoProvider('')
+                    setSsoCode('')
+                    setSsoState('')
+                    setSsoPendingToken('')
                   }}
                   className="input pl-10"
                   placeholder="••••••••"
@@ -177,11 +234,42 @@ export default function Login() {
                 <span>Entrando...</span>
               ) : (
                 <>
-                  {tenantOptions.length > 0 ? 'Acessar tenant' : 'Entrar'}
+                  {tenantOptions.length > 0 ? 'Acessar tenant' : ssoProvider ? 'Concluir com SSO' : 'Entrar'}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
+
+            {!tenantOptions.length && !ssoProvider && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-white px-2 text-gray-500">ou</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => startSsoLogin('google')}
+                    disabled={isLoading}
+                    className="w-full btn btn-secondary py-2.5 text-sm"
+                  >
+                    Entrar com Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startSsoLogin('microsoft')}
+                    disabled={isLoading}
+                    className="w-full btn btn-secondary py-2.5 text-sm"
+                  >
+                    Entrar com Microsoft
+                  </button>
+                </div>
+              </>
+            )}
           </form>
 
         </div>

@@ -18,6 +18,17 @@ export const authApi = {
     return response.data
   },
 
+  startSso: async (provider, redirectUri) => {
+    const encodedRedirect = encodeURIComponent(redirectUri)
+    const response = await api.post(`/auth/sso/${provider}/start?redirectUri=${encodedRedirect}`)
+    return response.data
+  },
+
+  completeSso: async (provider, payload) => {
+    const response = await api.post(`/auth/sso/${provider}/callback`, payload)
+    return response.data
+  },
+
   // Esqueceu a senha - envia nova senha temporária por email
   forgotPassword: async (email) => {
     const response = await api.post('/auth/forgot-password', { email })

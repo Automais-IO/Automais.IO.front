@@ -40,42 +40,7 @@ export function AuthProvider({ children }) {
   const login = async (username, password, tenantId = null) => {
     try {
       const response = await authApi.login(username, password, tenantId)
-
-      const requiresTenantSelection =
-        response.requiresTenantSelection === true || response.RequiresTenantSelection === true
-
-      if (requiresTenantSelection) {
-        return {
-          success: false,
-          requiresTenantSelection: true,
-          tenants: response.tenants || response.Tenants || [],
-        }
-      }
-
-      if (!response?.token || !response?.user) {
-        return {
-          success: false,
-          error: 'Resposta de login inválida',
-        }
-      }
-      
-      // Salvar token e usuário
-      setToken(response.token)
-      setUser(response.user)
-      const needCh =
-        response.mustChangePassword === true ||
-        response.MustChangePassword === true ||
-        jwtRequiresPasswordChange(response.token)
-      setMustChangePassword(needCh)
-      localStorage.setItem('token', response.token)
-      localStorage.setItem('user', JSON.stringify(response.user))
-
-      if (response.user?.tenantId || response.user?.TenantId) {
-        const tenantId = response.user.tenantId || response.user.TenantId
-        setTenantId(tenantId)
-      }
-
-      return { success: true, mustChangePassword: needCh }
+      return consumeAuthResponse(response)
     } catch (error) {
       console.error('Erro ao fazer login:', error)
       return { 
@@ -83,6 +48,58 @@ export function AuthProvider({ children }) {
         error: error.message || 'Erro ao fazer login. Verifique suas credenciais.' 
       }
     }
+  }
+
+  const completeSso = async (provider, payload) => {
+    try {
+      const response = await authApi.completeSso(provider, payload)
+      return consumeAuthResponse(response)
+    } catch (error) {
+      console.error('Erro ao concluir SSO:', error)
+      return {
+        success: false,
+        error: error.message || 'Erro ao concluir login SSO.',
+      }
+    }
+  }
+
+  const consumeAuthResponse = (response) => {
+    const requiresTenantSelection =
+      response.requiresTenantSelection === true || response.RequiresTenantSelection === true
+
+    if (requiresTenantSelection) {
+      return {
+        success: false,
+        requiresTenantSelection: true,
+        tenants: response.tenants || response.Tenants || [],
+        ssoPendingToken: response.ssoPendingToken || response.SsoPendingToken || null,
+      }
+    }
+
+    if (!response?.token || !response?.user) {
+      return {
+        success: false,
+        error: 'Resposta de login inválida',
+      }
+    }
+
+    // Salvar token e usuário
+    setToken(response.token)
+    setUser(response.user)
+    const needCh =
+      response.mustChangePassword === true ||
+      response.MustChangePassword === true ||
+      jwtRequiresPasswordChange(response.token)
+    setMustChangePassword(needCh)
+    localStorage.setItem('token', response.token)
+    localStorage.setItem('user', JSON.stringify(response.user))
+
+    if (response.user?.tenantId || response.user?.TenantId) {
+      const tenantId = response.user.tenantId || response.user.TenantId
+      setTenantId(tenantId)
+    }
+
+    return { success: true, mustChangePassword: needCh }
   }
 
   const logout = () => {
@@ -115,6 +132,7 @@ export function AuthProvider({ children }) {
         isLoading,
         mustChangePassword,
         login,
+        completeSso,
         logout,
         completePasswordChange,
       }}
