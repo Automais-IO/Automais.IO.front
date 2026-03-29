@@ -285,7 +285,13 @@ export default function Hosts() {
               <div
                 key={h.id}
                 className="card p-6 cursor-pointer border-2 border-transparent hover:border-primary-500 transition-colors"
-                onClick={() => navigate(`/hosts/${h.id}/management`)}
+                onClick={() => {
+                  if (!openHostConsoleWindow(h.id)) {
+                    window.alert(
+                      'Não foi possível abrir a janela do console. Permita pop-ups para este site e tente de novo.'
+                    )
+                  }
+                }}
               >
                 <div className="flex gap-3 mb-4">
                   <div className="p-2 bg-primary-100 rounded-lg shrink-0 self-start">
@@ -379,7 +385,9 @@ export default function Hosts() {
                         onClick={(e) => {
                           e.stopPropagation()
                           if (!openHostConsoleWindow(h.id)) {
-                            navigate(`/hosts/${h.id}/management`)
+                            window.alert(
+                              'Não foi possível abrir a janela do console. Permita pop-ups para este site e tente de novo.'
+                            )
                           }
                         }}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

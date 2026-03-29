@@ -105,7 +105,7 @@ const router = createBrowserRouter([
           { path: 'routers', element: <Routers /> },
           { path: 'routers/:routerId/management', element: <RouterManagement /> },
           { path: 'hosts', element: <Hosts /> },
-          { path: 'hosts/:hostId/management', element: <HostManagement /> },
+          { path: 'hosts/:hostId/management', element: <Navigate to="/hosts" replace /> },
           { path: 'users', element: <Users /> },
           { path: 'vpn', element: <Vpn /> },
         ],
