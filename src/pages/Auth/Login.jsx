@@ -53,6 +53,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const autoSsoAttemptedRef = useRef(false)
+  const isSsoFlowActive = Boolean(ssoProvider || ssoPendingToken)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -195,69 +196,73 @@ export default function Login() {
               </div>
             )}
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="label">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError('')
-                    setTenantOptions([])
-                    setSelectedTenantId('')
-                    autoSsoAttemptedRef.current = false
-                    setSsoProvider('')
-                    setSsoCode('')
-                    setSsoState('')
-                    setSsoPendingToken('')
-                  }}
-                  className="input pl-10"
-                  placeholder="seu@email.com"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
+            {!isSsoFlowActive && (
+              <>
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="label">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value)
+                        setError('')
+                        setTenantOptions([])
+                        setSelectedTenantId('')
+                        autoSsoAttemptedRef.current = false
+                        setSsoProvider('')
+                        setSsoCode('')
+                        setSsoState('')
+                        setSsoPendingToken('')
+                      }}
+                      className="input pl-10"
+                      placeholder="seu@email.com"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="label">
-                Senha
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setError('')
-                    setTenantOptions([])
-                    setSelectedTenantId('')
-                    autoSsoAttemptedRef.current = false
-                    setSsoProvider('')
-                    setSsoCode('')
-                    setSsoState('')
-                    setSsoPendingToken('')
-                  }}
-                  className="input pl-10"
-                  placeholder="••••••••"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
+                {/* Password */}
+                <div>
+                  <label htmlFor="password" className="label">
+                    Senha
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value)
+                        setError('')
+                        setTenantOptions([])
+                        setSelectedTenantId('')
+                        autoSsoAttemptedRef.current = false
+                        setSsoProvider('')
+                        setSsoCode('')
+                        setSsoState('')
+                        setSsoPendingToken('')
+                      }}
+                      className="input pl-10"
+                      placeholder="••••••••"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Seleção de tenant (apenas quando usuário tem múltiplos acessos) */}
             {tenantOptions.length > 0 && (
@@ -291,7 +296,7 @@ export default function Login() {
             )}
 
             {/* Remember me & Forgot password */}
-            {!ssoProvider && !ssoPendingToken && (
+            {!isSsoFlowActive && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
