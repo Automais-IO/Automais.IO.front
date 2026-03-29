@@ -52,6 +52,7 @@ export default function Login() {
   const [ssoPendingToken, setSsoPendingToken] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const isSsoFlow = !!ssoProvider && (!!ssoCode || !!ssoPendingToken)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -143,67 +144,78 @@ export default function Login() {
               </div>
             )}
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="label">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError('')
-                    setTenantOptions([])
-                    setSelectedTenantId('')
-                    setSsoProvider('')
-                    setSsoCode('')
-                    setSsoState('')
-                    setSsoPendingToken('')
-                  }}
-                  className="input pl-10"
-                  placeholder="seu@email.com"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
+            {!isSsoFlow ? (
+              <>
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="label">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value)
+                        setError('')
+                        setTenantOptions([])
+                        setSelectedTenantId('')
+                        setSsoProvider('')
+                        setSsoCode('')
+                        setSsoState('')
+                        setSsoPendingToken('')
+                      }}
+                      className="input pl-10"
+                      placeholder="seu@email.com"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="label">
-                Senha
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setError('')
-                    setTenantOptions([])
-                    setSelectedTenantId('')
-                    setSsoProvider('')
-                    setSsoCode('')
-                    setSsoState('')
-                    setSsoPendingToken('')
-                  }}
-                  className="input pl-10"
-                  placeholder="••••••••"
-                  disabled={isLoading}
-                />
+                {/* Password */}
+                <div>
+                  <label htmlFor="password" className="label">
+                    Senha
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value)
+                        setError('')
+                        setTenantOptions([])
+                        setSelectedTenantId('')
+                        setSsoProvider('')
+                        setSsoCode('')
+                        setSsoState('')
+                        setSsoPendingToken('')
+                      }}
+                      className="input pl-10"
+                      placeholder="••••••••"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                Autenticação {ssoProvider === 'microsoft' ? 'Microsoft' : 'Google'} validada. 
+                {tenantOptions.length > 0
+                  ? ' Selecione o tenant e clique em "Acessar tenant".'
+                  : ' Clique em "Concluir com SSO" para finalizar o acesso.'}
               </div>
-            </div>
+            )}
 
             {/* Seleção de tenant (apenas quando usuário tem múltiplos acessos) */}
             {tenantOptions.length > 0 && (
@@ -237,29 +249,31 @@ export default function Login() {
             )}
 
             {/* Remember me & Forgot password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Lembrar de mim
-                </label>
-              </div>
+            {!isSsoFlow && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                    Lembrar de mim
+                  </label>
+                </div>
 
-              <div className="text-sm">
-                <button
-                  type="button"
-                  onClick={() => navigate('/forgot-password')}
-                  className="font-medium text-primary-600 hover:text-primary-500"
-                >
-                  Esqueceu a senha?
-                </button>
+                <div className="text-sm">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/forgot-password')}
+                    className="font-medium text-primary-600 hover:text-primary-500"
+                  >
+                    Esqueceu a senha?
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Submit Button */}
             <button
