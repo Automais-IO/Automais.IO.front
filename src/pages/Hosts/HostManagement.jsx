@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link, useBlocker } from 'react-router-dom'
-import { ArrowLeft, Terminal, Loader2 } from 'lucide-react'
+import { ArrowLeft, Terminal, Loader2, X } from 'lucide-react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -98,6 +98,9 @@ export default function HostManagement() {
   const { hostId } = useParams()
   const navigate = useNavigate()
   const { data: host, isLoading, error } = useHost(hostId)
+  const [isPopup] = useState(
+    () => typeof window !== 'undefined' && Boolean(window.opener)
+  )
 
   const surfaceRef = useRef(null)
   const termRef = useRef(null)
@@ -117,8 +120,10 @@ export default function HostManagement() {
 
   /** true = manter stash ao sair (modal Sim); false = encerrar (modal Não); null = cancelar / não passou pelo modal. */
   const stashOnLeaveChoiceRef = useRef(null)
+  const [popupCloseConfirmOpen, setPopupCloseConfirmOpen] = useState(false)
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (isPopup) return false
     if (!sessionActive || !sessionRef.current?.isOpen) return false
     return (
       currentLocation.pathname !== nextLocation.pathname ||
@@ -393,8 +398,53 @@ export default function HostManagement() {
   }
 
   const handleLeaveDiscardSession = () => {
+    try {
+      sessionRef.current?.sendTerminalClose()
+    } catch {
+      /* ignore */
+    }
+    clearSshResumeKey(hostId)
     stashOnLeaveChoiceRef.current = false
     if (blocker.state === 'blocked') blocker.proceed()
+  }
+
+  const closeConsoleWindow = () => {
+    if (window.opener) {
+      window.close()
+      return
+    }
+    navigate('/hosts', { replace: true })
+  }
+
+  const handlePopupClose = () => {
+    if (!isPopup) {
+      navigate('/hosts')
+      return
+    }
+    if (sessionActive && sessionRef.current?.isOpen) {
+      setPopupCloseConfirmOpen(true)
+      return
+    }
+    closeConsoleWindow()
+  }
+
+  const handlePopupKeepSession = () => {
+    setPopupCloseConfirmOpen(false)
+    closeConsoleWindow()
+  }
+
+  const handlePopupDiscardSession = () => {
+    setPopupCloseConfirmOpen(false)
+    try {
+      sessionRef.current?.sendTerminalClose()
+    } catch {
+      /* ignore */
+    }
+    clearSshResumeKey(hostId)
+    skipPersistNextUnmountRef.current = true
+    destroyStashedTerminal(hostId)
+    setSessionActive(false)
+    closeConsoleWindow()
   }
 
   if (isLoading) {
@@ -417,12 +467,29 @@ export default function HostManagement() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto flex flex-col h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] min-h-0 overflow-hidden box-border">
+    <div
+      className={
+        isPopup
+          ? 'fixed inset-0 z-[100] bg-white p-4 flex flex-col min-h-0 overflow-hidden box-border'
+          : 'p-6 max-w-6xl mx-auto flex flex-col h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] min-h-0 overflow-hidden box-border'
+      }
+    >
+      {isPopup && (
+        <button
+          type="button"
+          onClick={handlePopupClose}
+          className="absolute top-2 right-2 z-20 p-2 rounded-md bg-black/50 hover:bg-black/70 text-gray-300 hover:text-white transition-colors"
+          title="Fechar"
+          aria-label="Fechar janela do console SSH"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      )}
       <div className="flex items-center gap-3 mb-4 shrink-0">
         <button
           type="button"
           className="btn btn-ghost btn-sm"
-          onClick={() => navigate('/hosts')}
+          onClick={handlePopupClose}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
@@ -497,6 +564,39 @@ export default function HostManagement() {
               type="button"
               className="btn btn-primary btn-sm"
               onClick={handleLeaveKeepSession}
+            >
+              Sim
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={popupCloseConfirmOpen}
+        onClose={() => setPopupCloseConfirmOpen(false)}
+        title="Fechar console SSH"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">Deseja manter a sessão ativa?</p>
+          <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-gray-200">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setPopupCloseConfirmOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={handlePopupDiscardSession}
+            >
+              Não
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handlePopupKeepSession}
             >
               Sim
             </button>

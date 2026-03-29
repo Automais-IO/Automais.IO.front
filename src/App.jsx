@@ -88,6 +88,10 @@ const router = createBrowserRouter([
         element: <HostRemoteDisplay />,
       },
       {
+        path: 'host-console/:hostId',
+        element: <HostManagement />,
+      },
+      {
         path: 'devices/:deviceId/web-ui/*',
         element: <DeviceWebUi />,
       },

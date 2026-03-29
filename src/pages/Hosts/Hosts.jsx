@@ -10,6 +10,7 @@ import ConnectHostModal from '../../components/Modal/ConnectHostModal'
 import Modal from '../../components/Modal/Modal'
 import clsx from 'clsx'
 import { openRemoteDisplayWindow } from '../../utils/openRemoteDisplayWindow'
+import { openHostConsoleWindow } from '../../utils/openHostConsoleWindow'
 
 const statusLabels = {
   Online: { label: 'Online', color: 'badge-success' },
@@ -377,7 +378,9 @@ export default function Hosts() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          navigate(`/hosts/${h.id}/management`)
+                          if (!openHostConsoleWindow(h.id)) {
+                            navigate(`/hosts/${h.id}/management`)
+                          }
                         }}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                         title="Console SSH"
