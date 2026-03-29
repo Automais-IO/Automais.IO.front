@@ -9,6 +9,8 @@ export default function Login() {
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [tenantOptions, setTenantOptions] = useState([])
+  const [selectedTenantId, setSelectedTenantId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -18,7 +20,14 @@ export default function Login() {
     setIsLoading(true)
     
     try {
-      const result = await login(email, password)
+      const result = await login(email, password, selectedTenantId || undefined)
+
+      if (result.requiresTenantSelection) {
+        const options = result.tenants || []
+        setTenantOptions(options)
+        setSelectedTenantId((current) => current || options[0]?.tenantId || options[0]?.TenantId || '')
+        return
+      }
       
       if (result.success) {
         navigate(result.mustChangePassword ? '/definir-senha' : '/')
@@ -65,6 +74,8 @@ export default function Login() {
                   onChange={(e) => {
                     setEmail(e.target.value)
                     setError('')
+                    setTenantOptions([])
+                    setSelectedTenantId('')
                   }}
                   className="input pl-10"
                   placeholder="seu@email.com"
@@ -90,6 +101,8 @@ export default function Login() {
                   onChange={(e) => {
                     setPassword(e.target.value)
                     setError('')
+                    setTenantOptions([])
+                    setSelectedTenantId('')
                   }}
                   className="input pl-10"
                   placeholder="••••••••"
@@ -97,6 +110,37 @@ export default function Login() {
                 />
               </div>
             </div>
+
+            {/* Seleção de tenant (apenas quando usuário tem múltiplos acessos) */}
+            {tenantOptions.length > 0 && (
+              <div>
+                <label htmlFor="tenant" className="label">
+                  Tenant
+                </label>
+                <select
+                  id="tenant"
+                  name="tenant"
+                  value={selectedTenantId}
+                  onChange={(e) => {
+                    setSelectedTenantId(e.target.value)
+                    setError('')
+                  }}
+                  className="input"
+                  disabled={isLoading}
+                  required
+                >
+                  {tenantOptions.map((tenant) => {
+                    const tenantId = tenant.tenantId || tenant.TenantId
+                    const tenantName = tenant.tenantName || tenant.TenantName || tenantId
+                    return (
+                      <option key={tenantId} value={tenantId}>
+                        {tenantName}
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+            )}
 
             {/* Remember me & Forgot password */}
             <div className="flex items-center justify-between">
@@ -133,7 +177,7 @@ export default function Login() {
                 <span>Entrando...</span>
               ) : (
                 <>
-                  Entrar
+                  {tenantOptions.length > 0 ? 'Acessar tenant' : 'Entrar'}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

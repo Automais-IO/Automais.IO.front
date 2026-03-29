@@ -37,9 +37,27 @@ export function AuthProvider({ children }) {
     setIsLoading(false)
   }, [])
 
-  const login = async (username, password) => {
+  const login = async (username, password, tenantId = null) => {
     try {
-      const response = await authApi.login(username, password)
+      const response = await authApi.login(username, password, tenantId)
+
+      const requiresTenantSelection =
+        response.requiresTenantSelection === true || response.RequiresTenantSelection === true
+
+      if (requiresTenantSelection) {
+        return {
+          success: false,
+          requiresTenantSelection: true,
+          tenants: response.tenants || response.Tenants || [],
+        }
+      }
+
+      if (!response?.token || !response?.user) {
+        return {
+          success: false,
+          error: 'Resposta de login inválida',
+        }
+      }
       
       // Salvar token e usuário
       setToken(response.token)

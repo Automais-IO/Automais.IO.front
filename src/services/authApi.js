@@ -2,10 +2,18 @@ import api from './api'
 
 export const authApi = {
   // Fazer login
-  login: async (username, password) => {
-    const response = await api.post('/auth/login', {
+  login: async (username, password, tenantId) => {
+    const payload = {
       username,
-      password
+      password,
+    }
+
+    if (tenantId) {
+      payload.tenantId = tenantId
+    }
+
+    const response = await api.post('/auth/login', {
+      ...payload,
     })
     return response.data
   },
