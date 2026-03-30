@@ -12,12 +12,12 @@ export const useUsers = () => {
   })
 }
 
-export const useOrphanUsers = () => {
+export const useOrphanUsers = (enabled = true) => {
   const tenantId = getTenantId()
   return useQuery({
     queryKey: ['orphanUsers', tenantId],
     queryFn: () => usersApi.getOrphans(tenantId),
-    enabled: !!tenantId,
+    enabled: !!tenantId && enabled,
   })
 }
 

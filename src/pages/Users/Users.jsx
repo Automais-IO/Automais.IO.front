@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { useApproveOrphanUser, useOrphanUsers, useRejectOrphanUser, useUsers } from '../../hooks/useUsers'
 import UserModal from '../../components/Modal/UserModal'
 import { useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
 
 const roleLabels = {
   owner: { label: 'Owner', color: 'badge-primary' },
@@ -12,8 +13,10 @@ const roleLabels = {
 }
 
 export default function Users() {
+  const { user } = useAuth()
+  const isGlobalUser = Boolean(user?.isGlobalUser || user?.IsGlobalUser)
   const { data: users, isLoading, error } = useUsers()
-  const { data: orphanUsers, isLoading: isOrphansLoading } = useOrphanUsers()
+  const { data: orphanUsers, isLoading: isOrphansLoading } = useOrphanUsers(isGlobalUser)
   const approveOrphanMutation = useApproveOrphanUser()
   const rejectOrphanMutation = useRejectOrphanUser()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -147,68 +150,70 @@ export default function Users() {
         </select>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 bg-amber-50">
-          <h2 className="text-sm font-semibold text-amber-900">
-            Cadastros pendentes (orfaos sem tenant)
-          </h2>
-          <p className="text-xs text-amber-800 mt-1">
-            Aprove para associar ao tenant atual com perfil Viewer, ou rejeite para excluir.
-          </p>
-        </div>
-        {isOrphansLoading ? (
-          <div className="p-4 text-sm text-gray-600">Carregando fila de orfaos...</div>
-        ) : !orphanUsers?.length ? (
-          <div className="p-4 text-sm text-gray-600">Nao ha usuarios orfaos pendentes.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left py-2 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario</th>
-                  <th className="text-left py-2 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Cadastro</th>
-                  <th className="text-left py-2 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Acoes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {orphanUsers.map((orphan) => (
-                  <tr key={orphan.userId}>
-                    <td className="py-3 px-4">
-                      <div className="text-sm font-medium text-gray-900">{orphan.name || 'Sem nome'}</div>
-                      <div className="text-sm text-gray-600">{orphan.email}</div>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700">
-                      {orphan.createdAt ? new Date(orphan.createdAt).toLocaleDateString('pt-BR') : '-'}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleApproveOrphan(orphan.userId)}
-                          disabled={approveOrphanMutation.isPending || rejectOrphanMutation.isPending}
-                          className="btn btn-secondary text-xs px-3 py-2"
-                        >
-                          <Check className="w-4 h-4" />
-                          Aprovar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRejectOrphan(orphan.userId)}
-                          disabled={approveOrphanMutation.isPending || rejectOrphanMutation.isPending}
-                          className="btn btn-danger text-xs px-3 py-2"
-                        >
-                          <X className="w-4 h-4" />
-                          Rejeitar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {isGlobalUser && (
+        <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200 bg-amber-50">
+            <h2 className="text-sm font-semibold text-amber-900">
+              Cadastros pendentes (orfaos sem tenant)
+            </h2>
+            <p className="text-xs text-amber-800 mt-1">
+              Aprove para associar ao tenant atual com perfil Viewer, ou rejeite para excluir.
+            </p>
           </div>
-        )}
-      </div>
+          {isOrphansLoading ? (
+            <div className="p-4 text-sm text-gray-600">Carregando fila de orfaos...</div>
+          ) : !orphanUsers?.length ? (
+            <div className="p-4 text-sm text-gray-600">Nao ha usuarios orfaos pendentes.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left py-2 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario</th>
+                    <th className="text-left py-2 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Cadastro</th>
+                    <th className="text-left py-2 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {orphanUsers.map((orphan) => (
+                    <tr key={orphan.userId}>
+                      <td className="py-3 px-4">
+                        <div className="text-sm font-medium text-gray-900">{orphan.name || 'Sem nome'}</div>
+                        <div className="text-sm text-gray-600">{orphan.email}</div>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-700">
+                        {orphan.createdAt ? new Date(orphan.createdAt).toLocaleDateString('pt-BR') : '-'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveOrphan(orphan.userId)}
+                            disabled={approveOrphanMutation.isPending || rejectOrphanMutation.isPending}
+                            className="btn btn-secondary text-xs px-3 py-2"
+                          >
+                            <Check className="w-4 h-4" />
+                            Aprovar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectOrphan(orphan.userId)}
+                            disabled={approveOrphanMutation.isPending || rejectOrphanMutation.isPending}
+                            className="btn btn-danger text-xs px-3 py-2"
+                          >
+                            <X className="w-4 h-4" />
+                            Rejeitar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Users Table */}
       {filteredUsers.length === 0 ? (
