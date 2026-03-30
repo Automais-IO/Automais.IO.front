@@ -9,6 +9,12 @@ const HOST_KINDS = [
   { value: 'Windows', label: 'Windows' },
 ]
 
+const formatInstallationCode = (digits) => {
+  const cleaned = (digits || '').replace(/\D/g, '').slice(0, 9)
+  const parts = cleaned.match(/.{1,3}/g)
+  return parts ? parts.join(' ') : ''
+}
+
 export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
   const isEditing = !!host
   const createHost = useCreateHost()
@@ -79,6 +85,16 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
+    if (name === 'installationCode') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 9)
+      setFormData((prev) => ({
+        ...prev,
+        installationCode: digitsOnly,
+      }))
+      if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }))
+      return
+    }
+
     const raw =
       type === 'checkbox'
         ? checked
@@ -191,7 +207,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
             <input
               name="installationCode"
               className="input w-full"
-              value={formData.installationCode}
+              value={formatInstallationCode(formData.installationCode)}
               onChange={handleChange}
               placeholder="Ex.: 123456789"
             />
