@@ -193,7 +193,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
               className="input w-full"
               value={formData.installationCode}
               onChange={handleChange}
-              placeholder="Ex.: 123456"
+              placeholder="Ex.: 123456789"
             />
             <p className="text-xs text-gray-500 mt-1">
               Instale o Automais.IO.remote no Windows e informe o código exibido no agente.
