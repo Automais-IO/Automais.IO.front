@@ -13,6 +13,7 @@ const steps = [
 ]
 
 export default function ConnectHostModal({ isOpen, onClose, host }) {
+  const isWindowsHost = host?.hostKind === 'Windows'
   const [setupUrl, setSetupUrl] = useState(null)
   const [copied, setCopied] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
@@ -28,6 +29,14 @@ export default function ConnectHostModal({ isOpen, onClose, host }) {
 
   const activate = useCallback(async () => {
     if (!host?.id) return
+    if (host.hostKind === 'Windows') {
+      setSetupUrl(null)
+      setError(null)
+      setExpired(false)
+      setCurrentStep(0)
+      setCopied(false)
+      return
+    }
     setLoading(true)
     setError(null)
     setExpired(false)
@@ -42,7 +51,7 @@ export default function ConnectHostModal({ isOpen, onClose, host }) {
     } finally {
       setLoading(false)
     }
-  }, [host?.id])
+  }, [host?.id, host?.hostKind])
 
   useEffect(() => {
     if (isOpen && host?.id) {
@@ -54,7 +63,7 @@ export default function ConnectHostModal({ isOpen, onClose, host }) {
   }, [isOpen, host?.id, activate])
 
   useEffect(() => {
-    if (!isOpen || !setupUrl || currentStep >= 2) {
+    if (!isOpen || isWindowsHost || !setupUrl || currentStep >= 2) {
       if (pollingRef.current) clearInterval(pollingRef.current)
       return
     }
@@ -86,7 +95,7 @@ export default function ConnectHostModal({ isOpen, onClose, host }) {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current)
     }
-  }, [isOpen, setupUrl, host?.id, currentStep])
+  }, [isOpen, setupUrl, host?.id, currentStep, isWindowsHost])
 
   const handleCopy = async () => {
     try {
@@ -141,7 +150,29 @@ export default function ConnectHostModal({ isOpen, onClose, host }) {
           </div>
         )}
 
-        {setupUrl && !error && (
+        {isWindowsHost && !error && (
+          <>
+            <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-2">
+              <p className="text-sm text-blue-900 font-medium">
+                Fluxo Windows (agente órfão)
+              </p>
+              <p className="text-sm text-blue-800">
+                1. Instale o aplicativo <strong>Automais.IO.remote</strong> no host Windows.
+              </p>
+              <p className="text-sm text-blue-800">
+                2. O agente mostra um código de instalação.
+              </p>
+              <p className="text-sm text-blue-800">
+                3. No painel, edite/crie o host Windows informando esse código.
+              </p>
+              <p className="text-sm text-blue-800">
+                4. Após o vínculo, o agente recebe configuração VPN automaticamente e inicia o túnel.
+              </p>
+            </div>
+          </>
+        )}
+
+        {setupUrl && !error && !isWindowsHost && (
           <>
             <div>
               <p className="text-sm text-gray-700 mb-3">

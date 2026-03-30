@@ -28,6 +28,7 @@ const provisioningLabels = {
 
 const kindLabels = {
   LinuxUbuntu: 'Linux Ubuntu',
+  Windows: 'Windows',
 }
 
 /**
@@ -187,7 +188,7 @@ export default function Hosts() {
             Hosts
           </h1>
           <p className="mt-1 text-sm text-gray-600">
-            Servidores Linux gerenciados via VPN e SSH
+            Hosts Linux e Windows gerenciados via VPN
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -354,7 +355,8 @@ export default function Hosts() {
                       </div>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
-                      {kindLabels[h.hostKind] || h.hostKind} · SSH :{h.sshPort}
+                      {kindLabels[h.hostKind] || h.hostKind}
+                      {h.hostKind === 'LinuxUbuntu' ? ` · SSH :${h.sshPort}` : ''}
                       {h.remoteDisplayEnabled !== false &&
                         ` · display :${h.remoteDisplayPort ?? 5900}`}
                     </p>

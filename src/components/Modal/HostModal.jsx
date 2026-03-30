@@ -4,7 +4,10 @@ import { useCreateHost, useUpdateHost } from '../../hooks/useHosts'
 import { vpnNetworksApi } from '../../services/vpnNetworksApi'
 import { getTenantId } from '../../config/tenant'
 
-const HOST_KINDS = [{ value: 'LinuxUbuntu', label: 'Linux Ubuntu' }]
+const HOST_KINDS = [
+  { value: 'LinuxUbuntu', label: 'Linux Ubuntu' },
+  { value: 'Windows', label: 'Windows' },
+]
 
 export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
   const isEditing = !!host
@@ -15,6 +18,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
     name: '',
     hostKind: 'LinuxUbuntu',
     vpnNetworkId: '',
+    installationCode: '',
     sshPort: 22,
     remoteDisplayPort: 5900,
     remoteDisplayEnabled: true,
@@ -31,6 +35,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
         name: host.name || '',
         hostKind: host.hostKind || 'LinuxUbuntu',
         vpnNetworkId: host.vpnNetworkId ? String(host.vpnNetworkId) : '',
+        installationCode: '',
         sshPort: host.sshPort ?? 22,
         remoteDisplayPort: host.remoteDisplayPort ?? 5900,
         remoteDisplayEnabled: host.remoteDisplayEnabled !== false,
@@ -42,6 +47,7 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
         name: '',
         hostKind: 'LinuxUbuntu',
         vpnNetworkId: '',
+        installationCode: '',
         sshPort: 22,
         remoteDisplayPort: 5900,
         remoteDisplayEnabled: true,
@@ -93,6 +99,9 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
     const next = {}
     if (!formData.name?.trim()) next.name = 'Nome obrigatório'
     if (!formData.vpnNetworkId) next.vpnNetworkId = 'Rede VPN obrigatória'
+    if (!isEditing && formData.hostKind === 'Windows' && !formData.installationCode?.trim()) {
+      next.installationCode = 'Código de instalação obrigatório para host Windows'
+    }
     if (Object.keys(next).length) {
       setErrors(next)
       return
@@ -102,6 +111,8 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
       name: formData.name.trim(),
       hostKind: formData.hostKind,
       vpnNetworkId: formData.vpnNetworkId,
+      installationCode:
+        formData.hostKind === 'Windows' ? formData.installationCode.trim() : null,
       sshPort: Number(formData.sshPort) || 22,
       remoteDisplayPort: Number(formData.remoteDisplayPort) || 5900,
       remoteDisplayEnabled: Boolean(formData.remoteDisplayEnabled),
@@ -173,6 +184,25 @@ export default function HostModal({ isOpen, onClose, host = null, onCreated }) {
             ))}
           </select>
         </div>
+
+        {formData.hostKind === 'Windows' && (
+          <div>
+            <label className="label">Código de instalação (agente) *</label>
+            <input
+              name="installationCode"
+              className="input w-full"
+              value={formData.installationCode}
+              onChange={handleChange}
+              placeholder="Ex.: 123456"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Instale o Automais.IO.remote no Windows e informe o código exibido no agente.
+            </p>
+            {errors.installationCode && (
+              <p className="text-sm text-red-600 mt-1">{errors.installationCode}</p>
+            )}
+          </div>
+        )}
 
         <div>
           <label className="label">Porta SSH *</label>
