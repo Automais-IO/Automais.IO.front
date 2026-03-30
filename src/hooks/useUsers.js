@@ -12,6 +12,15 @@ export const useUsers = () => {
   })
 }
 
+export const useOrphanUsers = () => {
+  const tenantId = getTenantId()
+  return useQuery({
+    queryKey: ['orphanUsers', tenantId],
+    queryFn: () => usersApi.getOrphans(tenantId),
+    enabled: !!tenantId,
+  })
+}
+
 export const useUser = (id) => {
   return useQuery({
     queryKey: ['user', id],
@@ -52,6 +61,31 @@ export const useDeleteUser = () => {
     mutationFn: (id) => usersApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users', tenantId] })
+    },
+  })
+}
+
+export const useApproveOrphanUser = () => {
+  const queryClient = useQueryClient()
+  const tenantId = getTenantId()
+
+  return useMutation({
+    mutationFn: (userId) => usersApi.approveOrphan(tenantId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', tenantId] })
+      queryClient.invalidateQueries({ queryKey: ['orphanUsers', tenantId] })
+    },
+  })
+}
+
+export const useRejectOrphanUser = () => {
+  const queryClient = useQueryClient()
+  const tenantId = getTenantId()
+
+  return useMutation({
+    mutationFn: (userId) => usersApi.rejectOrphan(tenantId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orphanUsers', tenantId] })
     },
   })
 }

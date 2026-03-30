@@ -63,6 +63,19 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const register = async (name, email) => {
+    try {
+      const response = await authApi.register(name, email)
+      return consumeAuthResponse(response)
+    } catch (error) {
+      console.error('Erro ao cadastrar usuário:', error)
+      return {
+        success: false,
+        error: error.message || 'Erro ao cadastrar conta.',
+      }
+    }
+  }
+
   const consumeAuthResponse = (response) => {
     const requiresTenantSelection =
       response.requiresTenantSelection === true || response.RequiresTenantSelection === true
@@ -73,6 +86,19 @@ export function AuthProvider({ children }) {
         requiresTenantSelection: true,
         tenants: response.tenants || response.Tenants || [],
         ssoPendingToken: response.ssoPendingToken || response.SsoPendingToken || null,
+      }
+    }
+
+    const isOrphanPendingApproval =
+      response.isOrphanPendingApproval === true || response.IsOrphanPendingApproval === true
+    if (isOrphanPendingApproval) {
+      return {
+        success: false,
+        isOrphanPendingApproval: true,
+        error:
+          response.message ||
+          response.Message ||
+          'Conta cadastrada, mas sem associação com tenant. Solicite aprovação ao responsável.',
       }
     }
 
@@ -133,6 +159,7 @@ export function AuthProvider({ children }) {
         mustChangePassword,
         login,
         completeSso,
+        register,
         logout,
         completePasswordChange,
       }}

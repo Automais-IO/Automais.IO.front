@@ -19,6 +19,7 @@ import HostRemoteDisplay from './pages/Hosts/HostRemoteDisplay'
 import Users from './pages/Users/Users'
 import Vpn from './pages/Vpn/Vpn'
 import Login from './pages/Auth/Login'
+import Register from './pages/Auth/Register'
 import ForgotPassword from './pages/Auth/ForgotPassword'
 import DefinirSenha from './pages/Auth/DefinirSenha'
 
@@ -73,6 +74,11 @@ const router = createBrowserRouter([
     path: '/forgot-password',
     element: <GuestOrRedirect />,
     children: [{ index: true, element: <ForgotPassword /> }],
+  },
+  {
+    path: '/register',
+    element: <GuestOrRedirect />,
+    children: [{ index: true, element: <Register /> }],
   },
   {
     path: '/definir-senha',

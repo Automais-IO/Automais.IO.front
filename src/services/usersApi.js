@@ -7,6 +7,11 @@ export const usersApi = {
     return response.data
   },
 
+  getOrphans: async (tenantId) => {
+    const response = await api.get(`/tenants/${tenantId}/users/orphans`)
+    return response.data
+  },
+
   // Obter usuário por ID
   getById: async (id) => {
     const response = await api.get(`/users/${id}`)
@@ -28,6 +33,15 @@ export const usersApi = {
   // Deletar usuário
   delete: async (id) => {
     await api.delete(`/users/${id}`)
+  },
+
+  approveOrphan: async (tenantId, userId) => {
+    const response = await api.post(`/tenants/${tenantId}/users/orphans/${userId}/approve`)
+    return response.data
+  },
+
+  rejectOrphan: async (tenantId, userId) => {
+    await api.delete(`/tenants/${tenantId}/users/orphans/${userId}`)
   },
 
   // Atualizar redes do usuário

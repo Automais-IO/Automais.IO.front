@@ -29,6 +29,11 @@ export const authApi = {
     return response.data
   },
 
+  register: async (name, email) => {
+    const response = await api.post('/auth/register', { name, email })
+    return response.data
+  },
+
   // Esqueceu a senha - envia nova senha temporária por email
   forgotPassword: async (email) => {
     const response = await api.post('/auth/forgot-password', { email })

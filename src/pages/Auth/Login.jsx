@@ -369,6 +369,17 @@ export default function Login() {
                     Continuar com Microsoft
                   </button>
                 </div>
+
+                <div className="text-center text-sm text-gray-600">
+                  Ainda não tem cadastro?{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/register')}
+                    className="font-medium text-primary-600 hover:text-primary-500"
+                  >
+                    Criar conta
+                  </button>
+                </div>
               </>
             )}
           </form>
